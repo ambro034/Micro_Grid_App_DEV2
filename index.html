@@ -596,42 +596,6 @@ button.action-btn:hover {
 
 
 /* ============================================================
-   FINISH ROUND BUTTON
-   ============================================================ */
-
-.finish-round-button {
-
-    width: 100%;
-
-    margin-bottom: 12px;
-
-    background: var(--success);
-
-    color: #0b0f19;
-
-    border: 2px solid #059669;
-}
-
-
-.finish-round-button:hover {
-
-    background: #34d399;
-}
-
-
-.finish-round-button.finished {
-
-    background: #334155;
-
-    color: var(--text-muted);
-
-    border-color: var(--border);
-
-    cursor: default;
-}
-
-
-/* ============================================================
    PLAYER DETAILS
    ============================================================ */
 
@@ -2205,6 +2169,93 @@ async function showConfirmation(
 
 
 /* ============================================================
+   FINISH ROUND POP-UP
+   ============================================================ */
+
+async function promptFinishRound(pIdx) {
+
+    const p =
+        players[pIdx];
+
+
+    if(
+        !p ||
+        p.finishedThisRound
+    ) {
+
+        return;
+
+    }
+
+
+    const finishChoice =
+        await openGameModal({
+
+            title:
+                `${p.name}: Finish for This Round?`,
+
+            icon:"🏁",
+
+            body:`
+
+                <div class="modal-event success">
+
+                    <strong>
+                        Purchase complete.
+                    </strong>
+
+                    <br><br>
+
+                    Would you like to finish your play
+                    for <strong>Round ${state.round}</strong>?
+
+                </div>
+
+
+                <div style="
+                    margin-top:15px;
+                    color:var(--text-muted);
+                    font-size:0.85rem;">
+
+                    If you finish, you will no longer be
+                    able to make purchases during this round.
+
+                    You may also continue the round and
+                    leave your turn unfinished.
+
+                </div>
+
+            `,
+
+            buttons:[
+
+                {
+                    text:"Continue Round",
+                    className:"secondary",
+                    value:false
+                },
+
+                {
+                    text:"Finish for This Round",
+                    className:"success",
+                    value:true
+                }
+
+            ]
+
+        });
+
+
+    if(finishChoice) {
+
+        finishPlayerRound(pIdx);
+
+    }
+
+}
+
+
+/* ============================================================
    SETUP MODE
    ============================================================ */
 
@@ -3503,6 +3554,14 @@ async function buyCard(
             );
 
 
+            /*
+               The purchase that caused the brownout is complete.
+               The player is given the same finish decision after
+               the existing brownout event.
+            */
+
+            await promptFinishRound(pIdx);
+
             return;
 
         }
@@ -3548,6 +3607,14 @@ async function buyCard(
 
 
     updateUserInterface();
+
+
+    /*
+       The purchase is now complete. Ask the player whether
+       they want to finish the round using the new modal.
+    */
+
+    await promptFinishRound(pIdx);
 
 }
 
@@ -4360,28 +4427,6 @@ function updateUserInterface() {
                 ${turnBadge}
 
             </div>
-
-
-            <button
-                class="finish-round-button ${
-                    isFinished
-                        ? "finished"
-                        : ""
-                }"
-                onclick="finishPlayerRound(${idx})"
-                ${
-                    isFinished
-                        ? "disabled"
-                        : ""
-                }>
-
-                ${
-                    isFinished
-                        ? "✓ Finished for This Round"
-                        : "🏁 Finish for This Round"
-                }
-
-            </button>
 
 
             <div class="payment-summary">
