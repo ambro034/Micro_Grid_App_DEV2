@@ -769,21 +769,44 @@ button.action-btn:hover {
 }
 
 
+.game-card:not(:disabled) {
+
+    color: rgba(var(--primary), 0.5);
+}
+
 .game-card:hover:not(:disabled) {
 
     border-color: var(--primary);
+
+    color: rgba(var(--primary), 0.75);
 }
 
 
+.game-card.goods:not(:disabled) {
+
+    color: rgba(var(--yellow-card), 0.5);
+}
+
+   
 .game-card.goods:hover:not(:disabled) {
 
     border-color: var(--yellow-card);
+
+    color: rgba(var(--yellow-card), 0.75);
 }
 
 
+.game-card.solar:not(:disabled) {
+
+    color: rgba(var(--blue-card), 0.5);
+}
+
+   
 .game-card.solar:hover:not(:disabled) {
 
     border-color: var(--blue-card);
+
+    color: rgba(var(--blue-card), 0.75);
 }
 
 
