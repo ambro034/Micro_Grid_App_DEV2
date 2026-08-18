@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1073,7 +1074,13 @@ let state = {
 
     activePlayerIdx: 0,
 
-    randomized: false
+    randomized: false,
+
+    /* NEW:
+       When true, the current player must complete
+       the grid upgrade before the next player can act.
+    */
+    upgradeRequired: false
 
 };
 
@@ -1585,17 +1592,41 @@ function evaluateSystemDemand() {
         `${currentLoad} / ${state.capacity} e`;
 
 
+    /*
+       The upgrade button is now controlled by
+       state.upgradeRequired.
+
+       It only appears when a brownout has occurred
+       and an upgrade is mandatory.
+    */
+
+    const upgradeButton =
+        document.getElementById(
+            'upgradeGridBtn'
+        );
+
+
+    if(state.upgradeRequired) {
+
+        upgradeButton.style.display =
+            'block';
+
+    }
+
+    else {
+
+        upgradeButton.style.display =
+            'none';
+
+    }
+
+
     if(currentLoad > state.capacity) {
 
         document.getElementById(
             'dispDemand'
         ).style.color =
             'var(--danger)';
-
-        document.getElementById(
-            'upgradeGridBtn'
-        ).style.display =
-            'block';
 
     }
 
@@ -1605,11 +1636,6 @@ function evaluateSystemDemand() {
             'dispDemand'
         ).style.color =
             'var(--text-main)';
-
-        document.getElementById(
-            'upgradeGridBtn'
-        ).style.display =
-            'none';
 
     }
 
@@ -1624,6 +1650,22 @@ function evaluateSystemDemand() {
    ============================================================ */
 
 function noPurchase(pIdx) {
+
+    /*
+       Do not allow the turn to advance if a brownout
+       requires a grid upgrade.
+    */
+
+    if(state.upgradeRequired) {
+
+        alert(
+            "The grid must be upgraded before the next neighbor can take their turn."
+        );
+
+        return;
+
+    }
+
 
     const p =
         players[pIdx];
@@ -1653,6 +1695,22 @@ function buyCard(
     cardType,
     cardIndex
 ) {
+
+    /*
+       Prevent any additional purchase while
+       a brownout upgrade is required.
+    */
+
+    if(state.upgradeRequired) {
+
+        alert(
+            "The grid must be upgraded before the next neighbor can take their turn."
+        );
+
+        return;
+
+    }
+
 
     const p =
         players[pIdx];
@@ -1815,6 +1873,27 @@ function buyCard(
                 return;
 
             }
+
+
+            /*
+               A brownout has occurred.
+
+               The current player must now add capacity
+               before the turn can advance.
+            */
+
+            state.upgradeRequired = true;
+
+
+            document.getElementById(
+                'upgradeGridBtn'
+            ).style.display =
+                'block';
+
+
+            updateUserInterface();
+
+            return;
 
         }
 
@@ -1985,6 +2064,17 @@ function updateBrownoutBoxes() {
 
 function applyGridUpgrade() {
 
+    /*
+       An upgrade is only available after a brownout.
+    */
+
+    if(!state.upgradeRequired) {
+
+        return;
+
+    }
+
+
     const nextUpgradeIndex =
         state.brownouts - 1;
 
@@ -2015,14 +2105,6 @@ function applyGridUpgrade() {
                 ? 40
                 : 60;
 
-
-    /*
-       Manual setup reveals the capacity increase
-       and new capacity.
-
-       Random setup hides both values so players
-       only see the upgrade and associated fee.
-    */
 
     let upgradeMessage;
 
@@ -2078,6 +2160,15 @@ function applyGridUpgrade() {
         currentTierFee;
 
 
+    /*
+       Upgrade completed.
+
+       The next player can now take their turn.
+    */
+
+    state.upgradeRequired = false;
+
+
     appendLog(
 
         `🔧 Grid capacity upgraded by ` +
@@ -2092,6 +2183,17 @@ function applyGridUpgrade() {
 
     evaluateSystemDemand();
 
+
+    /*
+       Advance to the next player only after
+       the required upgrade has been completed.
+    */
+
+    state.activePlayerIdx =
+        (state.activePlayerIdx + 1)
+        % players.length;
+
+
     updateUserInterface();
 
 }
@@ -2102,6 +2204,22 @@ function applyGridUpgrade() {
    ============================================================ */
 
 function executeRoundEndPayments() {
+
+    /*
+       Do not allow the round to end while a
+       brownout upgrade is still required.
+    */
+
+    if(state.upgradeRequired) {
+
+        alert(
+            "The grid must be upgraded before the round can continue."
+        );
+
+        return;
+
+    }
+
 
     appendLog(
         `--- Executing Round ${state.round} Financial Settlement ---`
@@ -2230,6 +2348,19 @@ function updateUserInterface() {
         'dispFees'
     ).innerText =
         `$${state.feePerRound} / rd`;
+
+
+    /*
+       Make sure the Add Capacity button reflects
+       whether an upgrade is currently required.
+    */
+
+    document.getElementById(
+        'upgradeGridBtn'
+    ).style.display =
+        state.upgradeRequired
+            ? 'block'
+            : 'none';
 
 
     const container =
@@ -2390,149 +2521,181 @@ function updateUserInterface() {
 
                         <div class="card-selection">
 
-                            <button
-                                class="no-purchase-button"
-                                onclick="
-                                    noPurchase(${idx})
-                                ">
+                            ${
+                                state.upgradeRequired
 
-                                ⏭️ No Purchase This Round
+                                ? `
 
-                            </button>
+                                    <div style="
+                                        background:#451a03;
+                                        border:1px solid #f59e0b;
+                                        color:#fbbf24;
+                                        padding:12px;
+                                        border-radius:8px;
+                                        margin-bottom:15px;
+                                        text-align:center;
+                                        font-weight:bold;
+                                    ">
 
+                                        ⚠️ BROWNOUT RECOVERY REQUIRED
 
-                            <h4>
-                                🛒 Choose a Goods Card
-                            </h4>
+                                        <br><br>
 
+                                        Add grid capacity before the next neighbor can take their turn.
 
-                            <div class="card-options">
+                                    </div>
 
-                                ${
-                                    goodsCards.map(
-                                        (c,i) => `
+                                `
 
-                                        <button
-                                            class="game-card goods"
+                                : `
 
-                                            ${
-                                                c.quantity <= 0 ||
-                                                p.cash < c.price
-                                                    ? 'disabled'
-                                                    : ''
-                                            }
+                                    <button
+                                        class="no-purchase-button"
+                                        onclick="
+                                            noPurchase(${idx})
+                                        ">
 
-                                            onclick="
-                                                buyCard(
-                                                    ${idx},
-                                                    'yellow',
-                                                    ${i}
-                                                )
-                                            ">
+                                        ⏭️ No Purchase This Round
 
-                                            <div class="game-card-price">
-
-                                                $${c.price.toLocaleString()}
-
-                                            </div>
+                                    </button>
 
 
-                                            <div class="game-card-details">
-
-                                                ⚡ ${c.electrons}e<br>
-
-                                                😊 +${c.happiness}
-
-                                            </div>
+                                    <h4>
+                                        🛒 Choose a Goods Card
+                                    </h4>
 
 
-                                            <div class="card-count">
+                                    <div class="card-options">
 
-                                                ${c.quantity}
-                                                card${
-                                                    c.quantity === 1
-                                                        ? ''
-                                                        : 's'
-                                                }
-                                                remaining
+                                        ${
+                                            goodsCards.map(
+                                                (c,i) => `
 
-                                            </div>
+                                                <button
+                                                    class="game-card goods"
 
-                                        </button>
+                                                    ${
+                                                        c.quantity <= 0 ||
+                                                        p.cash < c.price
+                                                            ? 'disabled'
+                                                            : ''
+                                                    }
 
-                                    `
-                                    ).join('')
-                                }
+                                                    onclick="
+                                                        buyCard(
+                                                            ${idx},
+                                                            'yellow',
+                                                            ${i}
+                                                        )
+                                                    ">
 
-                            </div>
+                                                    <div class="game-card-price">
 
+                                                        $${c.price.toLocaleString()}
 
-                            <h4 style="margin-top:20px;">
-
-                                ☀️ Choose a Solar Panel Card
-
-                            </h4>
-
-
-                            <div class="card-options">
-
-                                ${
-                                    solarPanelCards.map(
-                                        (c,i) => `
-
-                                        <button
-                                            class="game-card solar"
-
-                                            ${
-                                                c.quantity <= 0 ||
-                                                p.cash < c.price
-                                                    ? 'disabled'
-                                                    : ''
-                                            }
-
-                                            onclick="
-                                                buyCard(
-                                                    ${idx},
-                                                    'blue',
-                                                    ${i}
-                                                )
-                                            ">
-
-                                            <div class="game-card-price">
-
-                                                $${c.price.toLocaleString()}
-
-                                            </div>
+                                                    </div>
 
 
-                                            <div class="game-card-details">
+                                                    <div class="game-card-details">
 
-                                                ⚡ +${c.electrons}e<br>
+                                                        ⚡ ${c.electrons}e<br>
 
-                                                😊 +${c.happiness}
+                                                        😊 +${c.happiness}
 
-                                            </div>
+                                                    </div>
 
 
-                                            <div class="card-count">
+                                                    <div class="card-count">
 
-                                                ${c.quantity}
-                                                card${
-                                                    c.quantity === 1
-                                                        ? ''
-                                                        : 's'
-                                                }
-                                                remaining
+                                                        ${c.quantity}
+                                                        card${
+                                                            c.quantity === 1
+                                                                ? ''
+                                                                : 's'
+                                                        }
+                                                        remaining
 
-                                            </div>
+                                                    </div>
 
-                                        </button>
+                                                </button>
 
-                                    `
-                                    ).join('')
-                                }
+                                            `
+                                            ).join('')
+                                        }
 
-                            </div>
+                                    </div>
+
+
+                                    <h4 style="margin-top:20px;">
+
+                                        ☀️ Choose a Solar Panel Card
+
+                                    </h4>
+
+
+                                    <div class="card-options">
+
+                                        ${
+                                            solarPanelCards.map(
+                                                (c,i) => `
+
+                                                <button
+                                                    class="game-card solar"
+
+                                                    ${
+                                                        c.quantity <= 0 ||
+                                                        p.cash < c.price
+                                                            ? 'disabled'
+                                                            : ''
+                                                    }
+
+                                                    onclick="
+                                                        buyCard(
+                                                            ${idx},
+                                                            'blue',
+                                                            ${i}
+                                                        )
+                                                    ">
+
+                                                    <div class="game-card-price">
+
+                                                        $${c.price.toLocaleString()}
+
+                                                    </div>
+
+
+                                                    <div class="game-card-details">
+
+                                                        ⚡ +${c.electrons}e<br>
+
+                                                        😊 +${c.happiness}
+
+                                                    </div>
+
+
+                                                    <div class="card-count">
+
+                                                        ${c.quantity}
+                                                        card${
+                                                            c.quantity === 1
+                                                                ? ''
+                                                                : 's'
+                                                        }
+                                                        remaining
+
+                                                    </div>
+
+                                                </button>
+
+                                            `
+                                            ).join('')
+                                        }
+
+                                    </div>
+
+                                `
+
+                            }
 
                         </div>
 
@@ -2594,15 +2757,33 @@ function updateUserInterface() {
 
     if(players.length > 0) {
 
-        document.getElementById(
-            'turnTrackingText'
-        ).innerText =
+        if(state.upgradeRequired) {
 
-            `Current turn belongs to: ${
-                players[
-                    state.activePlayerIdx
-                ].name
-            }`;
+            document.getElementById(
+                'turnTrackingText'
+            ).innerText =
+
+                `Grid upgrade required before ${
+                    players[
+                        state.activePlayerIdx
+                    ].name
+                } can complete the turn.`;
+
+        }
+
+        else {
+
+            document.getElementById(
+                'turnTrackingText'
+            ).innerText =
+
+                `Current turn belongs to: ${
+                    players[
+                        state.activePlayerIdx
+                    ].name
+                }`;
+
+        }
 
     }
 
@@ -2820,3 +3001,4 @@ function forceEndGame(condition) {
 
 </body>
 </html>
+```
