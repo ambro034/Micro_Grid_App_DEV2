@@ -1589,11 +1589,6 @@ function commenceGridSimulation() {
     );
 
 
-    /*
-       Do not reveal randomized capacity additions
-       to players through the log.
-    */
-
     if(!state.randomized) {
 
         appendLog(
@@ -1639,10 +1634,6 @@ function evaluateSystemDemand() {
         ).style.color =
             'var(--danger)';
 
-        /*
-           Only show the upgrade button when a brownout
-           has occurred and an upgrade is required.
-        */
 
         if(state.upgradeRequired) {
 
@@ -1702,6 +1693,54 @@ function noPurchase(pIdx) {
 
 
     updateUserInterface();
+
+}
+
+
+/* ============================================================
+   BROWNOUT FINE POPUP
+   ============================================================ */
+
+function showBrownoutFinePopup(
+    player,
+    brownoutNumber,
+    excess,
+    fineAmount
+) {
+
+    /*
+       The cash fine is $50 per excess electron.
+
+       The same fine can alternatively be paid with
+       Happiness at 1 Happiness point per excess electron.
+    */
+
+    const happinessCost =
+        excess;
+
+
+    alert(
+
+        `⚠️ BROWNOUT ${brownoutNumber} OCCURRED\n\n` +
+
+        `${player.name}'s purchase caused neighborhood demand ` +
+        `to exceed the grid's available capacity.\n\n` +
+
+        `Excess demand: ${excess} electron(s)\n\n` +
+
+        `FINE OWED:\n` +
+
+        `💵 Cash: $${fineAmount.toLocaleString()}\n` +
+
+        `😊 Happiness: ${happinessCost} point(s)\n\n` +
+
+        `The fine has initially been charged to the player's ` +
+        `cash balance.\n\n` +
+
+        `The player may use "Pay Fine With Happiness" to ` +
+        `replace the cash fine with the Happiness cost.`
+
+    );
 
 }
 
@@ -1851,13 +1890,22 @@ function buyCard(
                 excess * 50;
 
 
+            /*
+               Charge the cash fine immediately.
+            */
+
             p.cash -= fineAmount;
 
 
             appendLog(
 
-                `⚠️ BROWNOUT! Neighborhood demand reached ` +
-                `${load}e (Exceeded capacity by ${excess}e).`
+                `⚠️ BROWNOUT ${state.brownouts}! ` +
+
+                `Neighborhood demand reached ` +
+
+                `${load}e ` +
+
+                `(Exceeded capacity by ${excess}e).`
 
             );
 
@@ -1865,7 +1913,27 @@ function buyCard(
             appendLog(
 
                 `💥 ${p.name} was charged a system fine of ` +
+
                 `$${fineAmount}.`
+
+            );
+
+
+            /*
+               NEW:
+               Immediately notify the player of the
+               brownout and both available fine values.
+            */
+
+            showBrownoutFinePopup(
+
+                p,
+
+                state.brownouts,
+
+                excess,
+
+                fineAmount
 
             );
 
@@ -1985,7 +2053,9 @@ function triggerBankruptcyFineMitigation(pIdx) {
     appendLog(
 
         `💸 Bankruptcy protection applied to ${p.name}. ` +
+
         `Refunded cash fine, subtracted ${overageAmt} ` +
+
         `individual Happiness point(s) instead.`
 
     );
@@ -2103,16 +2173,6 @@ function applyGridUpgrade() {
                 : 60;
 
 
-    /*
-       MANUAL SETUP:
-       Reveal capacity increase, new capacity,
-       and current tier fee.
-
-       RANDOM SETUP:
-       Do NOT reveal capacity increase or new capacity.
-       The fee remains visible.
-    */
-
     let upgradeMessage;
 
 
@@ -2125,6 +2185,7 @@ function applyGridUpgrade() {
             `The grid requires an additional capacity upgrade.\n\n` +
 
             `This upgrade will permanently add a ` +
+
             `$${currentTierFee}/round fee to all neighbors.`;
 
     }
@@ -2136,6 +2197,7 @@ function applyGridUpgrade() {
             `Grid Upgrade\n\n` +
 
             `Add ${capacityIncrease} electrons ` +
+
             `to grid capacity?\n\n` +
 
             `New capacity: ${
@@ -2144,6 +2206,7 @@ function applyGridUpgrade() {
             }e\n\n` +
 
             `This will permanently add a ` +
+
             `$${currentTierFee}/round fee to all neighbors.`;
 
     }
@@ -2170,10 +2233,13 @@ function applyGridUpgrade() {
     appendLog(
 
         `🔧 Grid capacity upgraded by ` +
+
         `${capacityIncrease}e to ` +
+
         `${state.capacity}e! ` +
 
         `Added persistent $${currentTierFee}/round ` +
+
         `fee to all utility records.`
 
     );
@@ -2184,11 +2250,6 @@ function applyGridUpgrade() {
     ).style.display =
         'none';
 
-
-    /*
-       Now that the required upgrade has occurred,
-       advance to the next player's turn.
-    */
 
     state.activePlayerIdx =
         (state.activePlayerIdx + 1)
@@ -2207,11 +2268,6 @@ function applyGridUpgrade() {
    ============================================================ */
 
 function executeRoundEndPayments() {
-
-    /*
-       Do not allow Pay Day while a brownout upgrade
-       is still required.
-    */
 
     if(state.upgradeRequired) {
 
@@ -2267,6 +2323,7 @@ function executeRoundEndPayments() {
             appendLog(
 
                 `${p.name} earned $${surplusPayment} ` +
+
                 `for generating surplus power.`
 
             );
@@ -2282,6 +2339,7 @@ function executeRoundEndPayments() {
             appendLog(
 
                 `${p.name} paid $${utilityBill} ` +
+
                 `for energy grid usage.`
 
             );
@@ -2300,11 +2358,6 @@ function executeRoundEndPayments() {
         }
 
 
-        /*
-           Store the individual financial values
-           for display in the player's dashboard.
-        */
-
         p.lastPayDay =
             payDay + surplusPayment;
 
@@ -2318,8 +2371,8 @@ function executeRoundEndPayments() {
 
 
     /*
-       Keep the payment information visible during
-       the transition into the next round.
+       Keep payment information visible during
+       transition into the next round.
     */
 
     updateUserInterface();
@@ -2333,7 +2386,9 @@ function executeRoundEndPayments() {
         appendLog(
 
             `No grid components bought this round. ` +
+
             `Balanced system index counter: ` +
+
             `${state.stagnantCount}/4.`
 
         );
@@ -2430,11 +2485,6 @@ function updateUserInterface() {
                 }`;
 
 
-            /*
-               Individual player details are hidden
-               by default.
-            */
-
             const detailsClass =
                 p.showDetails
                     ? ''
@@ -2472,8 +2522,6 @@ function updateUserInterface() {
                 </div>
 
 
-                <!-- INDIVIDUAL PLAYER TOGGLE -->
-
                 <button
                     class="player-details-toggle"
                     onclick="
@@ -2484,8 +2532,6 @@ function updateUserInterface() {
 
                 </button>
 
-
-                <!-- HIDDEN PLAYER DETAILS -->
 
                 <div class="${detailsClass}">
 
@@ -2585,8 +2631,6 @@ function updateUserInterface() {
 
                 </div>
 
-
-                <!-- PAY DAY / UTILITY BILL / GRID FEE -->
 
                 <div class="payment-summary">
 
@@ -2869,11 +2913,6 @@ function updateUserInterface() {
         }
     );
 
-
-    /*
-       Keep the upgrade button visible whenever
-       an upgrade is required.
-    */
 
     if(state.upgradeRequired) {
 
