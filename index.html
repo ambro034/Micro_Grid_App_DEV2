@@ -21,7 +21,9 @@
     --text-muted: #94a3b8;
     --border: #22314d;
     --yellow-card: #eab308;
+    --yellow-card-light: #f9d35b;
     --blue-card: #0ea5e9;
+    --blue-card-light: #88d5f8
     --danger: #f43f5e;
     --success: #10b981;
     --warning: #f59e0b;
@@ -769,22 +771,16 @@ button.action-btn:hover {
 }
 
 
-.game-card:not(:disabled) {
-
-    color: rgba(var(--primary), 0.5);
-}
 
 .game-card:hover:not(:disabled) {
 
     border-color: var(--primary);
-
-    color: rgba(var(--primary), 0.75);
 }
 
 
 .game-card.goods:not(:disabled) {
 
-    color: rgba(var(--yellow-card), 0.5);
+    color: var(--yellow-card-light);
 }
 
    
@@ -792,13 +788,13 @@ button.action-btn:hover {
 
     border-color: var(--yellow-card);
 
-    color: rgba(var(--yellow-card), 0.75);
+    color: var(--yellow-card);
 }
 
 
 .game-card.solar:not(:disabled) {
 
-    color: rgba(var(--blue-card), 0.5);
+    color: var(--blue-card-light);
 }
 
    
@@ -806,7 +802,7 @@ button.action-btn:hover {
 
     border-color: var(--blue-card);
 
-    color: rgba(var(--blue-card), 0.75);
+    color: var(--blue-card);
 }
 
 
