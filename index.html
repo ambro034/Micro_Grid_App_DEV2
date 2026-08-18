@@ -540,9 +540,6 @@
         </div>
 
 
-        <!-- This dashboard item can be hidden during
-             randomized games -->
-
         <div
             id="demandDashboardCard"
             class="dash-card">
@@ -578,9 +575,6 @@
 
         </div>
 
-
-        <!-- This dashboard item can be hidden during
-             randomized games -->
 
         <div
             id="brownoutDashboardCard"
@@ -626,8 +620,6 @@
         </p>
 
 
-        <!-- PLAYER REGISTRATION -->
-
         <div class="flex-row">
 
             <input
@@ -653,8 +645,6 @@
             ">
         </div>
 
-
-        <!-- GAME PARAMETER SETUP -->
 
         <div class="setup-section">
 
@@ -698,8 +688,6 @@
 
             </div>
 
-
-            <!-- MANUAL SETUP -->
 
             <div id="manualSetup">
 
@@ -772,8 +760,6 @@
             </div>
 
 
-            <!-- RANDOM SETUP -->
-
             <div
                 id="randomSetup"
                 style="display:none;">
@@ -818,8 +804,6 @@
 
         </div>
 
-
-        <!-- START GAME -->
 
         <div class="flex-row" style="margin-top:20px;">
 
@@ -1341,19 +1325,13 @@ function establishGridParameters() {
 
     if(setupMode === "random") {
 
-        /* Initial capacity: 30–50 */
-
         state.capacity =
             randomInteger(30,50);
 
 
-        /* Brownout limit: 1–6 */
-
         state.brownoutLimit =
             randomInteger(1,6);
 
-
-        /* Capacity addition after each brownout */
 
         state.capacityAdditions = [];
 
@@ -1376,8 +1354,6 @@ function establishGridParameters() {
     }
 
     else {
-
-        /* Manual initial capacity */
 
         const capacityInput =
             document.getElementById(
@@ -1406,8 +1382,6 @@ function establishGridParameters() {
         }
 
 
-        /* Manual brownout limit */
-
         const limitInput =
             document.getElementById(
                 'brownoutLimitInput'
@@ -1434,8 +1408,6 @@ function establishGridParameters() {
 
         }
 
-
-        /* Manual capacity additions */
 
         let additions = [];
 
@@ -1514,8 +1486,6 @@ function commenceGridSimulation() {
     }
 
 
-    /* Establish parameters */
-
     if(!establishGridParameters()) {
 
         return;
@@ -1536,11 +1506,6 @@ function commenceGridSimulation() {
     state.activePlayerIdx =
         state.startingPlayerIdx;
 
-
-    /*
-       Hide the demand and brownout information
-       when parameters were randomized.
-    */
 
     if(state.randomized) {
 
@@ -1767,8 +1732,6 @@ function buyCard(
     p.cash -= card.price;
 
 
-    /* GOODS */
-
     if(cardType === 'yellow') {
 
         const electronUse =
@@ -1857,8 +1820,6 @@ function buyCard(
 
     }
 
-
-    /* SOLAR */
 
     else if(cardType === 'blue') {
 
@@ -2055,8 +2016,34 @@ function applyGridUpgrade() {
                 : 60;
 
 
-    const confirmed =
-        confirm(
+    /*
+       Manual setup reveals the capacity increase
+       and new capacity.
+
+       Random setup hides both values so players
+       only see the upgrade and associated fee.
+    */
+
+    let upgradeMessage;
+
+
+    if(state.randomized) {
+
+        upgradeMessage =
+
+            `Grid Upgrade\n\n` +
+
+            `The grid will be upgraded following the ` +
+            `current brownout.\n\n` +
+
+            `This will permanently add a ` +
+            `$${currentTierFee}/round fee to all neighbors.`;
+
+    }
+
+    else {
+
+        upgradeMessage =
 
             `Grid Upgrade\n\n` +
 
@@ -2069,8 +2056,14 @@ function applyGridUpgrade() {
             }e\n\n` +
 
             `This will permanently add a ` +
-            `$${currentTierFee}/round fee to all neighbors.`
+            `$${currentTierFee}/round fee to all neighbors.`;
 
+    }
+
+
+    const confirmed =
+        confirm(
+            upgradeMessage
         );
 
 
