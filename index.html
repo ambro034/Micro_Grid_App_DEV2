@@ -303,6 +303,11 @@
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
         }
 
+        .player-card.finished-round {
+            opacity: 0.65;
+            border-color: #475569;
+        }
+
         .player-header {
             display: flex;
             justify-content: space-between;
@@ -329,6 +334,12 @@
             font-weight: bold;
         }
 
+        .turn-badge.finished {
+            background: var(--success);
+            color: #0b0f19;
+            font-weight: bold;
+        }
+
         /* =====================================================
            PLAYER DETAILS TOGGLE
            ===================================================== */
@@ -347,6 +358,29 @@
 
         .player-details-hidden {
             display: none;
+        }
+
+        /* =====================================================
+           FINISH ROUND BUTTON
+           ===================================================== */
+
+        .finish-round-button {
+            width: 100%;
+            margin-bottom: 12px;
+            background: var(--success);
+            color: #0b0f19;
+            border: 2px solid #059669;
+        }
+
+        .finish-round-button:hover {
+            background: #34d399;
+        }
+
+        .finish-round-button.finished {
+            background: #334155;
+            color: var(--text-muted);
+            border-color: var(--border);
+            cursor: default;
         }
 
         /* =====================================================
@@ -1326,13 +1360,15 @@ function registerNeighbor() {
 
         showDetails:false,
 
-        finishedForRound:false,
-
         lastPayDay:0,
 
         lastUtilityBill:0,
 
-        lastGridFee:0
+        lastGridFee:0,
+
+        /* NEW: tracks whether this player has
+           finished the current round */
+        finishedThisRound:false
 
     });
 
@@ -1348,6 +1384,155 @@ function registerNeighbor() {
 
         "Registered: " +
         players.map(p => p.name).join(', ');
+
+}
+
+
+/* ============================================================
+   FIND NEXT UNFINISHED PLAYER
+   ============================================================ */
+
+function findNextUnfinishedPlayer(startIndex) {
+
+    if(players.length === 0) {
+        return -1;
+    }
+
+
+    for(
+        let offset = 0;
+        offset < players.length;
+        offset++
+    ) {
+
+        const idx =
+            (startIndex + offset) %
+            players.length;
+
+
+        if(!players[idx].finishedThisRound) {
+
+            return idx;
+
+        }
+
+    }
+
+
+    return -1;
+
+}
+
+
+/* ============================================================
+   CHECK WHETHER ALL PLAYERS HAVE FINISHED
+   ============================================================ */
+
+function allPlayersFinished() {
+
+    if(players.length === 0) {
+        return false;
+    }
+
+
+    return players.every(
+        p => p.finishedThisRound
+    );
+
+}
+
+
+/* ============================================================
+   FINISH PLAYER'S ROUND
+   ============================================================ */
+
+function finishPlayerRound(pIdx) {
+
+    const p = players[pIdx];
+
+
+    if(!p) {
+        return;
+    }
+
+
+    if(p.finishedThisRound) {
+        return;
+    }
+
+
+    /*
+       A player can only finish once per round.
+    */
+
+    p.finishedThisRound = true;
+
+
+    appendLog(
+        `${p.name} finished their play for Round ${state.round}.`
+    );
+
+
+    /*
+       If the player who finished was the active player,
+       immediately find the next player who has not finished.
+    */
+
+    if(pIdx === state.activePlayerIdx) {
+
+        const nextPlayer =
+            findNextUnfinishedPlayer(
+                (pIdx + 1) % players.length
+            );
+
+
+        state.activePlayerIdx =
+            nextPlayer;
+
+    }
+
+    else {
+
+        /*
+           The current active player may have already been
+           marked finished out of order. Make sure the active
+           player is always someone who is still available.
+        */
+
+        if(
+            state.activePlayerIdx === -1 ||
+            players[
+                state.activePlayerIdx
+            ].finishedThisRound
+        ) {
+
+            state.activePlayerIdx =
+                findNextUnfinishedPlayer(
+                    0
+                );
+
+        }
+
+    }
+
+
+    /*
+       If everyone is finished, there is no active player.
+       Pay Day will become available.
+    */
+
+    if(allPlayersFinished()) {
+
+        state.activePlayerIdx = -1;
+
+        appendLog(
+            `All players have finished Round ${state.round}. Pay Day is now available.`
+        );
+
+    }
+
+
+    updateUserInterface();
 
 }
 
@@ -1534,6 +1719,16 @@ function commenceGridSimulation() {
     }
 
 
+    /*
+       Make sure every player starts the first round
+       as unfinished.
+    */
+
+    players.forEach(
+        p => p.finishedThisRound = false
+    );
+
+
     document.getElementById(
         'setupView'
     ).style.display = 'none';
@@ -1670,13 +1865,6 @@ function evaluateSystemDemand() {
 
 function noPurchase(pIdx) {
 
-    if(players[pIdx] && players[pIdx].finishedForRound) {
-
-        return;
-
-    }
-
-
     if(state.upgradeRequired) {
 
         alert(
@@ -1692,83 +1880,25 @@ function noPurchase(pIdx) {
         players[pIdx];
 
 
+    if(p.finishedThisRound) {
+
+        return;
+
+    }
+
+
     appendLog(
         `${p.name} chose not to purchase a card this turn.`
     );
 
 
     state.activePlayerIdx =
-        (state.activePlayerIdx + 1)
-        % players.length;
+        findNextUnfinishedPlayer(
+            (pIdx + 1) % players.length
+        );
 
 
     updateUserInterface();
-
-}
-
-
-/* ============================================================
-   FINISH FOR ROUND
-   ============================================================ */
-
-function finishForRound(pIdx) {
-
-    if(!players[pIdx]) return;
-
-
-    const p =
-        players[pIdx];
-
-
-    if(p.finishedForRound) return;
-
-
-    p.finishedForRound = true;
-
-
-    appendLog(
-        `${p.name} finished play for Round ${state.round}.`
-    );
-
-
-    if(pIdx === state.activePlayerIdx) {
-
-        advanceToNextUnfinishedPlayer();
-
-    }
-
-
-    updateUserInterface();
-
-}
-
-
-/* ============================================================
-   ADVANCE TO NEXT UNFINISHED PLAYER
-   ============================================================ */
-
-function advanceToNextUnfinishedPlayer() {
-
-    if(players.length === 0) return;
-
-
-    for(let i=1;i<=players.length;i++) {
-
-        const nextIdx =
-            (state.activePlayerIdx + i)
-            % players.length;
-
-
-        if(!players[nextIdx].finishedForRound) {
-
-            state.activePlayerIdx =
-                nextIdx;
-
-            return;
-
-        }
-
-    }
 
 }
 
@@ -1783,13 +1913,6 @@ function showBrownoutFinePopup(
     excess,
     fineAmount
 ) {
-
-    /*
-       The cash fine is $50 per excess electron.
-
-       The same fine can alternatively be paid with
-       Happiness at 1 Happiness point per excess electron.
-    */
 
     const happinessCost =
         excess;
@@ -1846,11 +1969,10 @@ function buyCard(
         players[pIdx];
 
 
-    if(p.finishedForRound) {
-
-        alert(
-            `${p.name} has already finished play for this round.`
-        );
+    if(
+        pIdx !== state.activePlayerIdx ||
+        p.finishedThisRound
+    ) {
 
         return;
 
@@ -1977,10 +2099,6 @@ function buyCard(
                 excess * 50;
 
 
-            /*
-               Charge the cash fine immediately.
-            */
-
             p.cash -= fineAmount;
 
 
@@ -2005,11 +2123,6 @@ function buyCard(
 
             );
 
-
-            /*
-               Immediately notify the player of the
-               brownout and both available fine values.
-            */
 
             showBrownoutFinePopup(
 
@@ -2040,11 +2153,6 @@ function buyCard(
 
             }
 
-
-            /*
-               A brownout requires a grid upgrade before
-               the next player can take their turn.
-            */
 
             state.upgradeRequired = true;
 
@@ -2090,14 +2198,15 @@ function buyCard(
 
 
     /*
-       Do not advance the turn if an upgrade is required.
+       Only advance to another unfinished player.
     */
 
     if(!state.upgradeRequired) {
 
         state.activePlayerIdx =
-            (state.activePlayerIdx + 1)
-            % players.length;
+            findNextUnfinishedPlayer(
+                (pIdx + 1) % players.length
+            );
 
     }
 
@@ -2219,6 +2328,7 @@ function updateBrownoutBoxes() {
 
     }
 
+
 }
 
 
@@ -2337,7 +2447,17 @@ function applyGridUpgrade() {
         'none';
 
 
-    advanceToNextUnfinishedPlayer();
+    /*
+       After an upgrade, resume play with the next
+       unfinished player rather than simply moving one
+       position in the original player array.
+    */
+
+    state.activePlayerIdx =
+        findNextUnfinishedPlayer(
+            (state.activePlayerIdx + 1) %
+            players.length
+        );
 
 
     evaluateSystemDemand();
@@ -2353,17 +2473,16 @@ function applyGridUpgrade() {
 
 function executeRoundEndPayments() {
 
-    const allPlayersFinished =
-        players.length > 0 &&
-        players.every(
-            p => p.finishedForRound
-        );
+    /*
+       NEW:
+       Pay Day cannot be processed until every player
+       has finished their current round.
+    */
 
-
-    if(!allPlayersFinished) {
+    if(!allPlayersFinished()) {
 
         alert(
-            "All players must finish play for the round before Pay Day and Utility Bills can be processed."
+            "All players must click 'Finish for This Round' before Pay Day and Utility Bills can be processed."
         );
 
         return;
@@ -2472,11 +2591,6 @@ function executeRoundEndPayments() {
     });
 
 
-    /*
-       Keep payment information visible during
-       transition into the next round.
-    */
-
     updateUserInterface();
 
 
@@ -2534,15 +2648,25 @@ function executeRoundEndPayments() {
 
 
     /*
-       Reset every player's finished status
-       for the new round.
+       NEW:
+       Reset all players so everyone is eligible to
+       participate in the new round.
     */
 
-    players.forEach(p => {
+    players.forEach(
+        p => p.finishedThisRound = false
+    );
 
-        p.finishedForRound = false;
 
-    });
+    /*
+       Make sure the new starting player is an
+       unfinished player.
+    */
+
+    state.activePlayerIdx =
+        findNextUnfinishedPlayer(
+            state.startingPlayerIdx
+        );
 
 
     updateUserInterface();
@@ -2569,22 +2693,22 @@ function updateUserInterface() {
 
 
     /*
-       Pay Day remains disabled until every player
-       has finished the round.
+       Update Pay Day button availability.
     */
 
-    const allPlayersFinished =
-        players.length > 0 &&
-        players.every(
-            p => p.finishedForRound
+    const payDayButton =
+        document.getElementById(
+            'payDayBtn'
         );
 
 
-    document.getElementById(
-        'payDayBtn'
-    ).disabled =
-        !allPlayersFinished ||
-        state.upgradeRequired;
+    if(payDayButton) {
+
+        payDayButton.disabled =
+            !allPlayersFinished() ||
+            state.upgradeRequired;
+
+    }
 
 
     const container =
@@ -2601,8 +2725,11 @@ function updateUserInterface() {
 
             const isCurrentTurn =
                 idx ===
-                state.activePlayerIdx &&
-                !p.finishedForRound;
+                state.activePlayerIdx;
+
+
+            const isFinished =
+                p.finishedThisRound;
 
 
             const card =
@@ -2613,8 +2740,13 @@ function updateUserInterface() {
 
             card.className =
                 `player-card ${
-                    isCurrentTurn
+                    isCurrentTurn &&
+                    !isFinished
                         ? 'active-turn'
+                        : ''
+                } ${
+                    isFinished
+                        ? 'finished-round'
                         : ''
                 }`;
 
@@ -2631,6 +2763,40 @@ function updateUserInterface() {
                     : '👁️ Show Player Details';
 
 
+            let turnBadge;
+
+
+            if(isFinished) {
+
+                turnBadge = `
+                    <span class="turn-badge finished">
+                        ✓ Finished
+                    </span>
+                `;
+
+            }
+
+            else if(isCurrentTurn) {
+
+                turnBadge = `
+                    <span class="turn-badge active">
+                        Active Turn
+                    </span>
+                `;
+
+            }
+
+            else {
+
+                turnBadge = `
+                    <span class="turn-badge">
+                        Waiting
+                    </span>
+                `;
+
+            }
+
+
             card.innerHTML = `
 
                 <div class="player-header">
@@ -2639,23 +2805,36 @@ function updateUserInterface() {
                         🏠 ${p.name}
                     </span>
 
-                    <span class="turn-badge ${
-                        isCurrentTurn
-                            ? 'active'
-                            : ''
-                    }">
-
-                        ${
-                            p.finishedForRound
-                                ? 'Finished'
-                                : isCurrentTurn
-                                    ? 'Active Turn'
-                                    : 'Waiting'
-                        }
-
-                    </span>
+                    ${turnBadge}
 
                 </div>
+
+
+                <button
+                    class="
+                        finish-round-button
+                        ${
+                            isFinished
+                                ? 'finished'
+                                : ''
+                        }
+                    "
+                    onclick="
+                        finishPlayerRound(${idx})
+                    "
+                    ${
+                        isFinished
+                            ? 'disabled'
+                            : ''
+                    }>
+
+                    ${
+                        isFinished
+                            ? '✓ Finished for This Round'
+                            : '🏁 Finish for This Round'
+                    }
+
+                </button>
 
 
                 <button
@@ -2665,41 +2844,6 @@ function updateUserInterface() {
                     ">
 
                     ${toggleText}
-
-                </button>
-
-
-                <button
-                    class="action-btn"
-                    style="
-                        width:100%;
-                        margin-bottom:12px;
-                        background:${
-                            p.finishedForRound
-                                ? '#166534'
-                                : '#475569'
-                        };
-                        color:white;
-                        border-color:${
-                            p.finishedForRound
-                                ? '#22c55e'
-                                : '#64748b'
-                        };
-                    "
-                    onclick="
-                        finishForRound(${idx})
-                    "
-                    ${
-                        p.finishedForRound
-                            ? 'disabled'
-                            : ''
-                    }>
-
-                    ${
-                        p.finishedForRound
-                            ? '✓ Finished for this Round'
-                            : 'Finish for this Round'
-                    }
 
                 </button>
 
@@ -2866,7 +3010,8 @@ function updateUserInterface() {
 
 
                 ${
-                    isCurrentTurn
+                    isCurrentTurn &&
+                    !isFinished
 
                     ? `
 
@@ -3036,17 +3181,25 @@ function updateUserInterface() {
                         ">
 
                             ${
-                                state.upgradeRequired
-                                    ? 'Grid upgrade required before the next player can take their turn.'
-                                    : p.finishedForRound
-                                        ? '✓ Finished play for this round.'
-                                        : `Waiting for
-                                            ${
-                                                players[
-                                                    state.activePlayerIdx
-                                                ].name
-                                            }
-                                            to complete their turn.`
+                                isFinished
+
+                                    ? '✓ This player has finished for this round.'
+
+                                    : state.upgradeRequired
+
+                                        ? 'Grid upgrade required before the next player can take their turn.'
+
+                                        : state.activePlayerIdx === -1
+
+                                            ? 'All players have finished this round.'
+
+                                            : `Waiting for
+                                                ${
+                                                    players[
+                                                        state.activePlayerIdx
+                                                    ].name
+                                                }
+                                                to complete their turn.`
                             }
 
                         </div>
@@ -3097,27 +3250,42 @@ function updateUserInterface() {
     }
 
 
-    if(players.length > 0) {
+    /*
+       Update the system status message to reflect
+       the actual remaining play order.
+    */
 
-        const activePlayer =
-            players[state.activePlayerIdx];
+    if(allPlayersFinished()) {
 
+        document.getElementById(
+            'turnTrackingText'
+        ).innerText =
 
-        if(activePlayer) {
+            `All players have finished Round ${state.round}. ` +
+            `Pay Day is ready.`;
 
-            document.getElementById(
-                'turnTrackingText'
-            ).innerText =
+    }
 
-                activePlayer.finishedForRound
+    else if(state.activePlayerIdx !== -1) {
 
-                    ? 'All remaining players must finish play for the round.'
+        document.getElementById(
+            'turnTrackingText'
+        ).innerText =
 
-                    : `Current turn belongs to: ${
-                        activePlayer.name
-                    }`;
+            `Current turn belongs to: ${
+                players[
+                    state.activePlayerIdx
+                ].name
+            }`;
 
-        }
+    }
+
+    else {
+
+        document.getElementById(
+            'turnTrackingText'
+        ).innerText =
+            "No active player.";
 
     }
 
