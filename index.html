@@ -2836,117 +2836,6 @@ function updateUserInterface() {
 
                 </button>
 
-
-                <button
-                    class="player-details-toggle"
-                    onclick="
-                        togglePlayerDetails(${idx})
-                    ">
-
-                    ${toggleText}
-
-                </button>
-
-
-                <div class="${detailsClass}">
-
-                    <table class="scorecard-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Wallet Cash
-                                </th>
-
-                                <th>
-                                    e From Goods (-)
-                                </th>
-
-                                <th>
-                                    e From Solar (+)
-                                </th>
-
-                                <th>
-                                    Total Net e Balance
-                                </th>
-
-                                <th>
-                                    Happiness Index
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            <tr>
-
-                                <td style="
-                                    color:var(--success);
-                                    font-weight:bold;
-                                ">
-
-                                    $${p.cash.toLocaleString()}
-
-                                </td>
-
-
-                                <td style="
-                                    color:var(--yellow-card);
-                                    font-weight:bold;
-                                ">
-
-                                    ${p.goodsE} e
-
-                                </td>
-
-
-                                <td style="
-                                    color:var(--blue-card);
-                                    font-weight:bold;
-                                ">
-
-                                    ${p.solarE} e
-
-                                </td>
-
-
-                                <td style="
-                                    font-weight:bold;
-                                    color:${
-                                        p.netE >= 0
-                                            ? 'var(--success)'
-                                            : 'var(--danger)'
-                                    };
-                                ">
-
-                                    ${p.netE} e
-
-                                </td>
-
-
-                                <td style="
-                                    color:#a855f7;
-                                    font-weight:bold;
-                                ">
-
-                                    ${p.happiness} 😊
-
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-
                 <div class="payment-summary">
 
                     <div class="payment-summary-title">
@@ -3228,6 +3117,118 @@ function updateUserInterface() {
                     </button>
 
                 </div>
+                
+
+
+                <button
+                    class="player-details-toggle"
+                    onclick="
+                        togglePlayerDetails(${idx})
+                    ">
+
+                    ${toggleText}
+
+                </button>
+
+
+                <div class="${detailsClass}">
+
+                    <table class="scorecard-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Wallet Cash
+                                </th>
+
+                                <th>
+                                    e From Goods (-)
+                                </th>
+
+                                <th>
+                                    e From Solar (+)
+                                </th>
+
+                                <th>
+                                    Total Net e Balance
+                                </th>
+
+                                <th>
+                                    Happiness Index
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            <tr>
+
+                                <td style="
+                                    color:var(--success);
+                                    font-weight:bold;
+                                ">
+
+                                    $${p.cash.toLocaleString()}
+
+                                </td>
+
+
+                                <td style="
+                                    color:var(--yellow-card);
+                                    font-weight:bold;
+                                ">
+
+                                    ${p.goodsE} e
+
+                                </td>
+
+
+                                <td style="
+                                    color:var(--blue-card);
+                                    font-weight:bold;
+                                ">
+
+                                    ${p.solarE} e
+
+                                </td>
+
+
+                                <td style="
+                                    font-weight:bold;
+                                    color:${
+                                        p.netE >= 0
+                                            ? 'var(--success)'
+                                            : 'var(--danger)'
+                                    };
+                                ">
+
+                                    ${p.netE} e
+
+                                </td>
+
+
+                                <td style="
+                                    color:#a855f7;
+                                    font-weight:bold;
+                                ">
+
+                                    ${p.happiness} 😊
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
 
             `;
 
