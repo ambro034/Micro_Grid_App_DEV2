@@ -330,35 +330,23 @@
         }
 
         /* =====================================================
-           PAYMENT SUMMARY
+           PLAYER DETAILS TOGGLE
            ===================================================== */
 
-        .payment-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .payment-item {
-            background: #0f172a;
+        .player-details-toggle {
+            width: 100%;
+            margin-bottom: 12px;
+            background: #334155;
+            color: white;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
         }
 
-        .payment-label {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: bold;
+        .player-details-toggle:hover {
+            background: #475569;
         }
 
-        .payment-value {
-            margin-top: 4px;
-            font-size: 1rem;
-            font-weight: bold;
+        .player-details-hidden {
+            display: none;
         }
 
         /* =====================================================
@@ -387,6 +375,33 @@
             color: var(--text-muted);
             font-size: 0.75rem;
             text-transform: uppercase;
+        }
+
+        /* =====================================================
+           PAYMENT SUMMARY
+           ===================================================== */
+
+        .payment-summary {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .payment-summary-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 0.9rem;
         }
 
         /* =====================================================
@@ -524,10 +539,6 @@
 
             .mode-buttons {
                 flex-direction: column;
-            }
-
-            .payment-summary {
-                grid-template-columns: 1fr;
             }
 
             .scorecard-table {
@@ -911,7 +922,7 @@
 
 
                 <button
-                    id="paydayBtn"
+                    id="payDayBtn"
                     onclick="executeRoundEndPayments()"
                     style="
                         background:var(--success);
@@ -1106,31 +1117,27 @@ let state = {
 
     randomized: false,
 
-    upgradeRequired: false,
-
-    lastPaymentRound: null
+    upgradeRequired: false
 
 };
 
 
 let players = [];
 
-let setupMode = "manual";
-
 
 /* ============================================================
    SETUP MODE
    ============================================================ */
 
+let setupMode = "manual";
+
+
 function setSetupMode(mode) {
 
     setupMode = mode;
 
-    const manual =
-        document.getElementById('manualSetup');
-
-    const random =
-        document.getElementById('randomSetup');
+    const manual = document.getElementById('manualSetup');
+    const random = document.getElementById('randomSetup');
 
     const manualButton =
         document.getElementById('manualModeButton');
@@ -1184,32 +1191,37 @@ function generateBrownoutCapacityInputs() {
     const input =
         document.getElementById('brownoutLimitInput');
 
-    let number =
-        parseInt(input.value);
+    let number = parseInt(input.value);
+
 
     if(isNaN(number)) {
+
         number = 4;
+
     }
 
-    number =
-        Math.max(1,Math.min(6,number));
+
+    number = Math.max(1,Math.min(6,number));
 
     input.value = number;
+
 
     const container =
         document.getElementById(
             'brownoutCapacityInputs'
         );
 
+
     container.innerHTML = "";
+
 
     for(let i=1;i<=number;i++) {
 
         const wrapper =
             document.createElement("div");
 
-        wrapper.className =
-            "brownout-input";
+        wrapper.className = "brownout-input";
+
 
         wrapper.innerHTML = `
 
@@ -1236,6 +1248,7 @@ function generateBrownoutCapacityInputs() {
 
         `;
 
+
         container.appendChild(wrapper);
 
     }
@@ -1257,14 +1270,17 @@ function appendLog(msg) {
             'actionHistoryLog'
         );
 
+
     const element =
         document.createElement('div');
 
-    element.className =
-        'log-item';
+
+    element.className = 'log-item';
+
 
     element.innerText =
         `[Rd ${state.round}] ${msg}`;
+
 
     log.insertBefore(
         element,
@@ -1285,10 +1301,13 @@ function registerNeighbor() {
             'pNameInput'
         );
 
+
     const name =
         input.value.trim();
 
+
     if(!name) return;
+
 
     players.push({
 
@@ -1304,7 +1323,9 @@ function registerNeighbor() {
 
         happiness:0,
 
-        lastPayday:0,
+        showDetails:false,
+
+        lastPayDay:0,
 
         lastUtilityBill:0,
 
@@ -1312,8 +1333,11 @@ function registerNeighbor() {
 
     });
 
+
     input.value = '';
+
     input.focus();
+
 
     document.getElementById(
         'interimList'
@@ -1321,6 +1345,24 @@ function registerNeighbor() {
 
         "Registered: " +
         players.map(p => p.name).join(', ');
+
+}
+
+
+/* ============================================================
+   TOGGLE INDIVIDUAL PLAYER DETAILS
+   ============================================================ */
+
+function togglePlayerDetails(pIdx) {
+
+    if(!players[pIdx]) return;
+
+
+    players[pIdx].showDetails =
+        !players[pIdx].showDetails;
+
+
+    updateUserInterface();
 
 }
 
@@ -1341,6 +1383,7 @@ function establishGridParameters() {
 
         state.capacityAdditions = [];
 
+
         for(
             let i=0;
             i<state.brownoutLimit;
@@ -1353,6 +1396,7 @@ function establishGridParameters() {
 
         }
 
+
         state.randomized = true;
 
     }
@@ -1364,10 +1408,12 @@ function establishGridParameters() {
                 'initialCapacityInput'
             );
 
+
         let capacity =
             parseInt(
                 capacityInput.value
             );
+
 
         if(
             isNaN(capacity) ||
@@ -1389,10 +1435,12 @@ function establishGridParameters() {
                 'brownoutLimitInput'
             );
 
+
         let limit =
             parseInt(
                 limitInput.value
             );
+
 
         if(
             isNaN(limit) ||
@@ -1411,6 +1459,7 @@ function establishGridParameters() {
 
         let additions = [];
 
+
         for(let i=1;i<=limit;i++) {
 
             const field =
@@ -1418,10 +1467,12 @@ function establishGridParameters() {
                     `brownoutAdd${i}`
                 );
 
+
             let value =
                 parseInt(
                     field.value
                 );
+
 
             if(
                 isNaN(value) ||
@@ -1437,24 +1488,19 @@ function establishGridParameters() {
 
             }
 
+
             additions.push(value);
 
         }
 
 
-        state.capacity =
-            capacity;
-
-        state.brownoutLimit =
-            limit;
-
-        state.capacityAdditions =
-            additions;
-
-        state.randomized =
-            false;
+        state.capacity = capacity;
+        state.brownoutLimit = limit;
+        state.capacityAdditions = additions;
+        state.randomized = false;
 
     }
+
 
     return true;
 
@@ -1479,13 +1525,16 @@ function commenceGridSimulation() {
 
 
     if(!establishGridParameters()) {
+
         return;
+
     }
 
 
     document.getElementById(
         'setupView'
     ).style.display = 'none';
+
 
     document.getElementById(
         'managerView'
@@ -1502,6 +1551,7 @@ function commenceGridSimulation() {
             'demandDashboardCard'
         ).style.display = 'none';
 
+
         document.getElementById(
             'brownoutDashboardCard'
         ).style.display = 'none';
@@ -1513,6 +1563,7 @@ function commenceGridSimulation() {
         document.getElementById(
             'demandDashboardCard'
         ).style.display = 'block';
+
 
         document.getElementById(
             'brownoutDashboardCard'
@@ -1538,11 +1589,20 @@ function commenceGridSimulation() {
     );
 
 
-    appendLog(
-        `Capacity additions after brownouts: ${
-            state.capacityAdditions.join(', ')
-        }e.`
-    );
+    /*
+       Do not reveal randomized capacity additions
+       to players through the log.
+    */
+
+    if(!state.randomized) {
+
+        appendLog(
+            `Capacity additions after brownouts: ${
+                state.capacityAdditions.join(', ')
+            }e.`
+        );
+
+    }
 
 }
 
@@ -1555,9 +1615,11 @@ function evaluateSystemDemand() {
 
     let currentLoad = 0;
 
+
     players.forEach(p => {
 
         currentLoad += p.goodsE;
+
         currentLoad -= p.solarE;
 
     });
@@ -1578,11 +1640,11 @@ function evaluateSystemDemand() {
             'var(--danger)';
 
         /*
-           If an upgrade is required because of a brownout,
-           keep the button visible.
+           Only show the upgrade button when a brownout
+           has occurred and an upgrade is required.
         */
 
-        if(!state.upgradeRequired) {
+        if(state.upgradeRequired) {
 
             document.getElementById(
                 'upgradeGridBtn'
@@ -1599,15 +1661,6 @@ function evaluateSystemDemand() {
             'dispDemand'
         ).style.color =
             'var(--text-main)';
-
-        if(!state.upgradeRequired) {
-
-            document.getElementById(
-                'upgradeGridBtn'
-            ).style.display =
-                'none';
-
-        }
 
     }
 
@@ -1626,7 +1679,7 @@ function noPurchase(pIdx) {
     if(state.upgradeRequired) {
 
         alert(
-            "The grid must be upgraded before the next player can continue."
+            "The grid must be upgraded before the next player can complete their turn."
         );
 
         return;
@@ -1637,6 +1690,7 @@ function noPurchase(pIdx) {
     const p =
         players[pIdx];
 
+
     appendLog(
         `${p.name} chose not to purchase a card this turn.`
     );
@@ -1645,6 +1699,7 @@ function noPurchase(pIdx) {
     state.activePlayerIdx =
         (state.activePlayerIdx + 1)
         % players.length;
+
 
     updateUserInterface();
 
@@ -1675,13 +1730,16 @@ function buyCard(
     const p =
         players[pIdx];
 
+
     const deck =
         cardType === 'yellow'
             ? goodsCards
             : solarPanelCards;
 
+
     const card =
         deck[cardIndex];
+
 
     if(!card) return;
 
@@ -1743,6 +1801,7 @@ function buyCard(
 
     state.anyPurchases = true;
 
+
     p.cash -= card.price;
 
 
@@ -1752,6 +1811,7 @@ function buyCard(
 
         const electronUse =
             Math.abs(card.electrons);
+
 
         p.goodsE += electronUse;
 
@@ -1764,8 +1824,11 @@ function buyCard(
         appendLog(
 
             `${p.name} purchased Goods Card ${card.id}. ` +
+
             `Paid $${card.price.toLocaleString()}, ` +
+
             `used ${electronUse}e, ` +
+
             `gained +${card.happiness} happiness.`
 
         );
@@ -1779,8 +1842,10 @@ function buyCard(
 
             state.brownouts += 1;
 
+
             const excess =
                 load - state.capacity;
+
 
             const fineAmount =
                 excess * 50;
@@ -1823,11 +1888,12 @@ function buyCard(
 
 
             /*
-               A brownout has occurred. The grid MUST be
-               upgraded before the next player can act.
+               A brownout requires a grid upgrade before
+               the next player can take their turn.
             */
 
             state.upgradeRequired = true;
+
 
             document.getElementById(
                 'upgradeGridBtn'
@@ -1854,8 +1920,11 @@ function buyCard(
         appendLog(
 
             `${p.name} purchased Solar Panel Card ${card.id}. ` +
+
             `Paid $${card.price.toLocaleString()}, ` +
+
             `generated +${card.electrons}e, ` +
+
             `gained +${card.happiness} happiness.`
 
         );
@@ -1866,9 +1935,17 @@ function buyCard(
     }
 
 
-    state.activePlayerIdx =
-        (state.activePlayerIdx + 1)
-        % players.length;
+    /*
+       Do not advance the turn if an upgrade is required.
+    */
+
+    if(!state.upgradeRequired) {
+
+        state.activePlayerIdx =
+            (state.activePlayerIdx + 1)
+            % players.length;
+
+    }
 
 
     updateUserInterface();
@@ -1885,6 +1962,7 @@ function triggerBankruptcyFineMitigation(pIdx) {
     const p =
         players[pIdx];
 
+
     const overageAmt =
         parseInt(
 
@@ -1899,11 +1977,9 @@ function triggerBankruptcyFineMitigation(pIdx) {
     if(isNaN(overageAmt)) return;
 
 
-    p.happiness -=
-        overageAmt;
+    p.happiness -= overageAmt;
 
-    p.cash +=
-        overageAmt * 50;
+    p.cash += overageAmt * 50;
 
 
     appendLog(
@@ -1931,6 +2007,7 @@ function updateBrownoutBoxes() {
             'brownoutDisplay'
         );
 
+
     container.innerHTML = "";
 
 
@@ -1945,14 +2022,18 @@ function updateBrownoutBoxes() {
                 'div'
             );
 
+
         box.id =
             `bo${i}`;
+
 
         box.className =
             'bo-box';
 
+
         box.innerText =
             i;
+
 
         container.appendChild(
             box
@@ -1971,6 +2052,7 @@ function updateBrownoutBoxes() {
             document.getElementById(
                 `bo${i}`
             );
+
 
         if(box) {
 
@@ -2021,36 +2103,35 @@ function applyGridUpgrade() {
                 : 60;
 
 
-    let confirmationText;
-
-
     /*
        MANUAL SETUP:
-       Reveal capacity increase and new capacity.
+       Reveal capacity increase, new capacity,
+       and current tier fee.
 
        RANDOM SETUP:
-       Hide capacity increase and new capacity.
-       Only reveal the fee.
+       Do NOT reveal capacity increase or new capacity.
+       The fee remains visible.
     */
+
+    let upgradeMessage;
+
 
     if(state.randomized) {
 
-        confirmationText =
+        upgradeMessage =
 
             `Grid Upgrade\n\n` +
 
-            `A grid upgrade is required following the brownout.\n\n` +
+            `The grid requires an additional capacity upgrade.\n\n` +
 
-            `This will permanently add a ` +
-            `$${currentTierFee}/round fee to all neighbors.\n\n` +
-
-            `Proceed with the grid upgrade?`;
+            `This upgrade will permanently add a ` +
+            `$${currentTierFee}/round fee to all neighbors.`;
 
     }
 
     else {
 
-        confirmationText =
+        upgradeMessage =
 
             `Grid Upgrade\n\n` +
 
@@ -2069,9 +2150,7 @@ function applyGridUpgrade() {
 
 
     const confirmed =
-        confirm(
-            confirmationText
-        );
+        confirm(upgradeMessage);
 
 
     if(!confirmed) return;
@@ -2084,11 +2163,6 @@ function applyGridUpgrade() {
     state.feePerRound +=
         currentTierFee;
 
-
-    /*
-       The required upgrade has now been completed.
-       The next player may continue.
-    */
 
     state.upgradeRequired = false;
 
@@ -2111,6 +2185,16 @@ function applyGridUpgrade() {
         'none';
 
 
+    /*
+       Now that the required upgrade has occurred,
+       advance to the next player's turn.
+    */
+
+    state.activePlayerIdx =
+        (state.activePlayerIdx + 1)
+        % players.length;
+
+
     evaluateSystemDemand();
 
     updateUserInterface();
@@ -2125,8 +2209,8 @@ function applyGridUpgrade() {
 function executeRoundEndPayments() {
 
     /*
-       Do not allow payday while a required grid upgrade
-       remains unresolved.
+       Do not allow Pay Day while a brownout upgrade
+       is still required.
     */
 
     if(state.upgradeRequired) {
@@ -2147,21 +2231,9 @@ function executeRoundEndPayments() {
 
     players.forEach(p => {
 
-        /*
-           Pay Day
-        */
-
-        const payday =
+        const payDay =
             500;
 
-
-        p.cash +=
-            payday;
-
-
-        /*
-           Utility Bill
-        */
 
         const baseBill =
             p.netE * 20;
@@ -2175,8 +2247,36 @@ function executeRoundEndPayments() {
             utilityBill =
                 Math.abs(baseBill);
 
-            p.cash -=
-                utilityBill;
+        }
+
+
+        const surplusPayment =
+            baseBill > 0
+                ? baseBill
+                : 0;
+
+
+        p.cash += payDay;
+
+
+        if(surplusPayment > 0) {
+
+            p.cash += surplusPayment;
+
+
+            appendLog(
+
+                `${p.name} earned $${surplusPayment} ` +
+                `for generating surplus power.`
+
+            );
+
+        }
+
+
+        if(utilityBill > 0) {
+
+            p.cash -= utilityBill;
 
 
             appendLog(
@@ -2188,25 +2288,6 @@ function executeRoundEndPayments() {
 
         }
 
-        else if(baseBill > 0) {
-
-            p.cash +=
-                baseBill;
-
-
-            appendLog(
-
-                `${p.name} earned $${baseBill} ` +
-                `for generating surplus power.`
-
-            );
-
-        }
-
-
-        /*
-           Grid Fee
-        */
 
         const gridFee =
             state.feePerRound;
@@ -2214,19 +2295,18 @@ function executeRoundEndPayments() {
 
         if(gridFee > 0) {
 
-            p.cash -=
-                gridFee;
+            p.cash -= gridFee;
 
         }
 
 
         /*
-           Store the three values that should appear
-           on the dashboard.
+           Store the individual financial values
+           for display in the player's dashboard.
         */
 
-        p.lastPayday =
-            payday;
+        p.lastPayDay =
+            payDay + surplusPayment;
 
         p.lastUtilityBill =
             utilityBill;
@@ -2237,8 +2317,12 @@ function executeRoundEndPayments() {
     });
 
 
-    state.lastPaymentRound =
-        state.round;
+    /*
+       Keep the payment information visible during
+       the transition into the next round.
+    */
+
+    updateUserInterface();
 
 
     if(!state.anyPurchases) {
@@ -2347,72 +2431,20 @@ function updateUserInterface() {
 
 
             /*
-               Payment summary is shown only after
-               the first payday has been processed.
+               Individual player details are hidden
+               by default.
             */
 
-            const paymentSummary =
-                state.lastPaymentRound !== null
-
-                ? `
-
-                    <div class="payment-summary">
-
-                        <div class="payment-item">
-
-                            <div class="payment-label">
-                                Pay Day
-                            </div>
-
-                            <div
-                                class="payment-value"
-                                style="color:var(--success);">
-
-                                +$${p.lastPayday.toLocaleString()}
-
-                            </div>
-
-                        </div>
+            const detailsClass =
+                p.showDetails
+                    ? ''
+                    : 'player-details-hidden';
 
 
-                        <div class="payment-item">
-
-                            <div class="payment-label">
-                                Utility Bill
-                            </div>
-
-                            <div
-                                class="payment-value"
-                                style="color:var(--danger);">
-
-                                $${p.lastUtilityBill.toLocaleString()}
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="payment-item">
-
-                            <div class="payment-label">
-                                Grid Fee
-                            </div>
-
-                            <div
-                                class="payment-value"
-                                style="color:#a855f7;">
-
-                                $${p.lastGridFee.toLocaleString()}
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                `
-
-                : '';
+            const toggleText =
+                p.showDetails
+                    ? '🙈 Hide Player Details'
+                    : '👁️ Show Player Details';
 
 
             card.innerHTML = `
@@ -2440,106 +2472,186 @@ function updateUserInterface() {
                 </div>
 
 
-                ${paymentSummary}
+                <!-- INDIVIDUAL PLAYER TOGGLE -->
+
+                <button
+                    class="player-details-toggle"
+                    onclick="
+                        togglePlayerDetails(${idx})
+                    ">
+
+                    ${toggleText}
+
+                </button>
 
 
-                <table class="scorecard-table">
+                <!-- HIDDEN PLAYER DETAILS -->
 
-                    <thead>
+                <div class="${detailsClass}">
 
-                        <tr>
+                    <table class="scorecard-table">
 
-                            <th>
-                                Wallet Cash
-                            </th>
+                        <thead>
 
-                            <th>
-                                e From Goods (-)
-                            </th>
+                            <tr>
 
-                            <th>
-                                e From Solar (+)
-                            </th>
+                                <th>
+                                    Wallet Cash
+                                </th>
 
-                            <th>
-                                Total Net e Balance
-                            </th>
+                                <th>
+                                    e From Goods (-)
+                                </th>
 
-                            <th>
-                                Happiness Index
-                            </th>
+                                <th>
+                                    e From Solar (+)
+                                </th>
 
-                        </tr>
+                                <th>
+                                    Total Net e Balance
+                                </th>
 
-                    </thead>
+                                <th>
+                                    Happiness Index
+                                </th>
 
+                            </tr>
 
-                    <tbody>
-
-                        <tr>
-
-                            <td style="
-                                color:var(--success);
-                                font-weight:bold;
-                            ">
-
-                                $${p.cash.toLocaleString()}
-
-                            </td>
+                        </thead>
 
 
-                            <td style="
-                                color:var(--yellow-card);
-                                font-weight:bold;
-                            ">
+                        <tbody>
 
-                                ${p.goodsE} e
+                            <tr>
 
-                            </td>
+                                <td style="
+                                    color:var(--success);
+                                    font-weight:bold;
+                                ">
 
+                                    $${p.cash.toLocaleString()}
 
-                            <td style="
-                                color:var(--blue-card);
-                                font-weight:bold;
-                            ">
-
-                                ${p.solarE} e
-
-                            </td>
+                                </td>
 
 
-                            <td style="
-                                font-weight:bold;
-                                color:${
-                                    p.netE >= 0
-                                        ? 'var(--success)'
-                                        : 'var(--danger)'
-                                };
-                            ">
+                                <td style="
+                                    color:var(--yellow-card);
+                                    font-weight:bold;
+                                ">
 
-                                ${p.netE} e
+                                    ${p.goodsE} e
 
-                            </td>
+                                </td>
 
 
-                            <td style="
-                                color:#a855f7;
-                                font-weight:bold;
-                            ">
+                                <td style="
+                                    color:var(--blue-card);
+                                    font-weight:bold;
+                                ">
 
-                                ${p.happiness} 😊
+                                    ${p.solarE} e
 
-                            </td>
+                                </td>
 
-                        </tr>
 
-                    </tbody>
+                                <td style="
+                                    font-weight:bold;
+                                    color:${
+                                        p.netE >= 0
+                                            ? 'var(--success)'
+                                            : 'var(--danger)'
+                                    };
+                                ">
 
-                </table>
+                                    ${p.netE} e
+
+                                </td>
+
+
+                                <td style="
+                                    color:#a855f7;
+                                    font-weight:bold;
+                                ">
+
+                                    ${p.happiness} 😊
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- PAY DAY / UTILITY BILL / GRID FEE -->
+
+                <div class="payment-summary">
+
+                    <div class="payment-summary-title">
+
+                        💰 Financial Summary
+
+                    </div>
+
+
+                    <div class="payment-row">
+
+                        <span>
+                            Pay Day
+                        </span>
+
+                        <strong style="
+                            color:var(--success);
+                        ">
+
+                            +$${p.lastPayDay.toLocaleString()}
+
+                        </strong>
+
+                    </div>
+
+
+                    <div class="payment-row">
+
+                        <span>
+                            Utility Bill
+                        </span>
+
+                        <strong style="
+                            color:var(--danger);
+                        ">
+
+                            -$${p.lastUtilityBill.toLocaleString()}
+
+                        </strong>
+
+                    </div>
+
+
+                    <div class="payment-row">
+
+                        <span>
+                            Grid Fee
+                        </span>
+
+                        <strong style="
+                            color:var(--danger);
+                        ">
+
+                            -$${p.lastGridFee.toLocaleString()}
+
+                        </strong>
+
+                    </div>
+
+                </div>
 
 
                 ${
-                    isCurrentTurn && !state.upgradeRequired
+                    isCurrentTurn
 
                     ? `
 
@@ -2549,7 +2661,12 @@ function updateUserInterface() {
                                 class="no-purchase-button"
                                 onclick="
                                     noPurchase(${idx})
-                                ">
+                                "
+                                ${
+                                    state.upgradeRequired
+                                        ? 'disabled'
+                                        : ''
+                                }>
 
                                 ⏭️ No Purchase This Round
 
@@ -2572,7 +2689,8 @@ function updateUserInterface() {
 
                                             ${
                                                 c.quantity <= 0 ||
-                                                p.cash < c.price
+                                                p.cash < c.price ||
+                                                state.upgradeRequired
                                                     ? 'disabled'
                                                     : ''
                                             }
@@ -2640,7 +2758,8 @@ function updateUserInterface() {
 
                                             ${
                                                 c.quantity <= 0 ||
-                                                p.cash < c.price
+                                                p.cash < c.price ||
+                                                state.upgradeRequired
                                                     ? 'disabled'
                                                     : ''
                                             }
@@ -2693,56 +2812,6 @@ function updateUserInterface() {
 
                     `
 
-                    : state.upgradeRequired && isCurrentTurn
-
-                    ? `
-
-                        <div style="
-                            background:#3b0764;
-                            border:2px solid #8b5cf6;
-                            border-radius:10px;
-                            padding:20px;
-                            text-align:center;
-                            margin-top:15px;
-                        ">
-
-                            <strong style="
-                                color:#c4b5fd;
-                                font-size:1.05rem;
-                            ">
-
-                                ⚠️ Grid Upgrade Required
-
-                            </strong>
-
-                            <p style="
-                                color:#ddd6fe;
-                                margin-bottom:15px;
-                            ">
-
-                                A brownout has occurred.
-                                The grid must be upgraded
-                                before the next player can continue.
-
-                            </p>
-
-
-                            <button
-                                onclick="applyGridUpgrade()"
-                                style="
-                                    background:#8b5cf6;
-                                    color:white;
-                                    width:100%;
-                                ">
-
-                                🔧 Add Capacity
-
-                            </button>
-
-                        </div>
-
-                    `
-
                     : `
 
                         <div style="
@@ -2751,13 +2820,17 @@ function updateUserInterface() {
                             padding:15px;
                         ">
 
-                            Waiting for
                             ${
-                                players[
-                                    state.activePlayerIdx
-                                ].name
+                                state.upgradeRequired
+                                    ? 'Grid upgrade required before the next player can take their turn.'
+                                    : `Waiting for
+                                        ${
+                                            players[
+                                                state.activePlayerIdx
+                                            ].name
+                                        }
+                                        to complete their turn.`
                             }
-                            to complete their turn.
 
                         </div>
 
@@ -2797,32 +2870,32 @@ function updateUserInterface() {
     );
 
 
+    /*
+       Keep the upgrade button visible whenever
+       an upgrade is required.
+    */
+
+    if(state.upgradeRequired) {
+
+        document.getElementById(
+            'upgradeGridBtn'
+        ).style.display =
+            'block';
+
+    }
+
+
     if(players.length > 0) {
 
-        if(state.upgradeRequired) {
+        document.getElementById(
+            'turnTrackingText'
+        ).innerText =
 
-            document.getElementById(
-                'turnTrackingText'
-            ).innerText =
-                `Grid upgrade required before ${
-                    players[state.activePlayerIdx].name
-                } can continue.`;
-
-        }
-
-        else {
-
-            document.getElementById(
-                'turnTrackingText'
-            ).innerText =
-
-                `Current turn belongs to: ${
-                    players[
-                        state.activePlayerIdx
-                    ].name
-                }`;
-
-        }
+            `Current turn belongs to: ${
+                players[
+                    state.activePlayerIdx
+                ].name
+            }`;
 
     }
 
@@ -2864,8 +2937,10 @@ function forceEndGame(condition) {
 
     players.forEach(
         p => {
+
             groupHappinessSum +=
                 p.happiness;
+
         }
     );
 
@@ -2874,6 +2949,7 @@ function forceEndGame(condition) {
 
         heading.innerText =
             "🚨 CRITICAL GRID FAILURE: BLACKOUT OCCURRED";
+
 
         heading.style.color =
             "var(--danger)";
@@ -2906,6 +2982,7 @@ function forceEndGame(condition) {
         heading.innerText =
             "⚖️ BALANCED GRID STABILIZATION ACHIEVED";
 
+
         heading.style.color =
             "var(--success)";
 
@@ -2932,6 +3009,7 @@ function forceEndGame(condition) {
 
         heading.innerText =
             "🏁 GAME COMPLETED: TIME LIMIT CONCLUDED";
+
 
         heading.style.color =
             "var(--primary)";
