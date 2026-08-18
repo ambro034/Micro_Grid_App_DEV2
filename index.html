@@ -1171,8 +1171,11 @@ function setSetupMode(mode) {
 
     setupMode = mode;
 
-    const manual = document.getElementById('manualSetup');
-    const random = document.getElementById('randomSetup');
+    const manual =
+        document.getElementById('manualSetup');
+
+    const random =
+        document.getElementById('randomSetup');
 
     const manualButton =
         document.getElementById('manualModeButton');
@@ -1224,9 +1227,12 @@ function randomInteger(min,max) {
 function generateBrownoutCapacityInputs() {
 
     const input =
-        document.getElementById('brownoutLimitInput');
+        document.getElementById(
+            'brownoutLimitInput'
+        );
 
-    let number = parseInt(input.value);
+    let number =
+        parseInt(input.value);
 
 
     if(isNaN(number)) {
@@ -1236,7 +1242,11 @@ function generateBrownoutCapacityInputs() {
     }
 
 
-    number = Math.max(1,Math.min(6,number));
+    number =
+        Math.max(
+            1,
+            Math.min(6,number)
+        );
 
     input.value = number;
 
@@ -1255,7 +1265,8 @@ function generateBrownoutCapacityInputs() {
         const wrapper =
             document.createElement("div");
 
-        wrapper.className = "brownout-input";
+        wrapper.className =
+            "brownout-input";
 
 
         wrapper.innerHTML = `
@@ -1310,7 +1321,8 @@ function appendLog(msg) {
         document.createElement('div');
 
 
-    element.className = 'log-item';
+    element.className =
+        'log-item';
 
 
     element.innerText =
@@ -1366,8 +1378,6 @@ function registerNeighbor() {
 
         lastGridFee:0,
 
-        /* NEW: tracks whether this player has
-           finished the current round */
         finishedThisRound:false
 
     });
@@ -1448,7 +1458,8 @@ function allPlayersFinished() {
 
 function finishPlayerRound(pIdx) {
 
-    const p = players[pIdx];
+    const p =
+        players[pIdx];
 
 
     if(!p) {
@@ -1461,10 +1472,6 @@ function finishPlayerRound(pIdx) {
     }
 
 
-    /*
-       A player can only finish once per round.
-    */
-
     p.finishedThisRound = true;
 
 
@@ -1472,11 +1479,6 @@ function finishPlayerRound(pIdx) {
         `${p.name} finished their play for Round ${state.round}.`
     );
 
-
-    /*
-       If the player who finished was the active player,
-       immediately find the next player who has not finished.
-    */
 
     if(pIdx === state.activePlayerIdx) {
 
@@ -1493,12 +1495,6 @@ function finishPlayerRound(pIdx) {
 
     else {
 
-        /*
-           The current active player may have already been
-           marked finished out of order. Make sure the active
-           player is always someone who is still available.
-        */
-
         if(
             state.activePlayerIdx === -1 ||
             players[
@@ -1507,19 +1503,12 @@ function finishPlayerRound(pIdx) {
         ) {
 
             state.activePlayerIdx =
-                findNextUnfinishedPlayer(
-                    0
-                );
+                findNextUnfinishedPlayer(0);
 
         }
 
     }
 
-
-    /*
-       If everyone is finished, there is no active player.
-       Pay Day will become available.
-    */
 
     if(allPlayersFinished()) {
 
@@ -1682,10 +1671,17 @@ function establishGridParameters() {
         }
 
 
-        state.capacity = capacity;
-        state.brownoutLimit = limit;
-        state.capacityAdditions = additions;
-        state.randomized = false;
+        state.capacity =
+            capacity;
+
+        state.brownoutLimit =
+            limit;
+
+        state.capacityAdditions =
+            additions;
+
+        state.randomized =
+            false;
 
     }
 
@@ -1718,11 +1714,6 @@ function commenceGridSimulation() {
 
     }
 
-
-    /*
-       Make sure every player starts the first round
-       as unfinished.
-    */
 
     players.forEach(
         p => p.finishedThisRound = false
@@ -1821,7 +1812,6 @@ function evaluateSystemDemand() {
     document.getElementById(
         'dispDemand'
     ).innerText =
-
         `${currentLoad} / ${state.capacity} e`;
 
 
@@ -1860,6 +1850,167 @@ function evaluateSystemDemand() {
 
 
 /* ============================================================
+   AUTOMATIC PAYMENT SYSTEM
+   ============================================================
+
+   $50 = 1 Happiness point.
+
+   Cash is always used first.
+
+   If the player cannot pay the full amount in cash,
+   the remaining balance is converted to Happiness.
+
+   Happiness deduction is always rounded UP to the
+   next whole point.
+
+   Examples:
+
+       $25 owed  -> 1 Happiness
+       $50 owed  -> 1 Happiness
+       $51 owed  -> 2 Happiness
+       $100 owed -> 2 Happiness
+       $101 owed -> 3 Happiness
+
+   This function is used for BOTH fines and utility bills.
+   ============================================================ */
+
+function processAutomaticPayment(
+    player,
+    amount,
+    paymentType
+) {
+
+    if(amount <= 0) {
+
+        return {
+            amountOwed: 0,
+            cashPaid: 0,
+            remainingBalance: 0,
+            happinessDeducted: 0
+        };
+
+    }
+
+
+    const amountOwed =
+        Math.ceil(amount);
+
+
+    const cashAvailable =
+        Math.max(0, player.cash);
+
+
+    const cashPaid =
+        Math.min(
+            cashAvailable,
+            amountOwed
+        );
+
+
+    player.cash -= cashPaid;
+
+
+    const remainingBalance =
+        amountOwed - cashPaid;
+
+
+    let happinessDeducted = 0;
+
+
+    if(remainingBalance > 0) {
+
+        happinessDeducted =
+            Math.ceil(
+                remainingBalance / 50
+            );
+
+
+        player.happiness -=
+            happinessDeducted;
+
+    }
+
+
+    appendLog(
+
+        `${player.name} owed $${amountOwed.toLocaleString()} ` +
+        `for ${paymentType}. ` +
+
+        `Cash paid: $${cashPaid.toLocaleString()}. ` +
+
+        `Happiness deducted: ${happinessDeducted} point(s).`
+
+    );
+
+
+    return {
+
+        amountOwed,
+
+        cashPaid,
+
+        remainingBalance,
+
+        happinessDeducted
+
+    };
+
+}
+
+
+/* ============================================================
+   SHOW AUTOMATIC PAYMENT RESULT
+   ============================================================ */
+
+function showAutomaticPaymentPopup(
+    player,
+    paymentType,
+    paymentResult
+) {
+
+    if(
+        paymentResult.amountOwed <= 0
+    ) {
+
+        return;
+
+    }
+
+
+    if(
+        paymentResult.happinessDeducted > 0
+    ) {
+
+        alert(
+
+            `💰 ${paymentType.toUpperCase()}\n\n` +
+
+            `${player.name} owed ` +
+            `$${paymentResult.amountOwed.toLocaleString()}.\n\n` +
+
+            `Cash paid: ` +
+            `$${paymentResult.cashPaid.toLocaleString()}\n\n` +
+
+            `Remaining balance: ` +
+            `$${paymentResult.remainingBalance.toLocaleString()}\n\n` +
+
+            `⚠️ Automatic Happiness deduction:\n` +
+
+            `-${paymentResult.happinessDeducted} ` +
+            `Happiness point(s)\n\n` +
+
+            `Happiness converts at $50 per point. ` +
+
+            `The deduction has been automatically applied.`
+
+        );
+
+    }
+
+}
+
+
+/* ============================================================
    NO PURCHASE
    ============================================================ */
 
@@ -1880,7 +2031,10 @@ function noPurchase(pIdx) {
         players[pIdx];
 
 
-    if(p.finishedThisRound) {
+    if(
+        p.finishedThisRound ||
+        pIdx !== state.activePlayerIdx
+    ) {
 
         return;
 
@@ -1911,11 +2065,40 @@ function showBrownoutFinePopup(
     player,
     brownoutNumber,
     excess,
-    fineAmount
+    fineAmount,
+    paymentResult
 ) {
 
-    const happinessCost =
-        excess;
+    let automaticPaymentText;
+
+
+    if(paymentResult.happinessDeducted > 0) {
+
+        automaticPaymentText =
+
+            `\n\nAUTOMATIC HAPPINESS DEDUCTION:\n` +
+
+            `-${paymentResult.happinessDeducted} ` +
+            `Happiness point(s)\n\n` +
+
+            `Cash paid: $${paymentResult.cashPaid.toLocaleString()}\n` +
+
+            `Remaining balance: $${paymentResult.remainingBalance.toLocaleString()}\n\n` +
+
+            `Happiness is automatically used at ` +
+            `$50 per point.`;
+
+    }
+
+    else {
+
+        automaticPaymentText =
+
+            `\n\nFINE PAID IN FULL WITH CASH:\n` +
+
+            `$${paymentResult.cashPaid.toLocaleString()}`;
+
+    }
 
 
     alert(
@@ -1929,15 +2112,9 @@ function showBrownoutFinePopup(
 
         `FINE OWED:\n` +
 
-        `💵 Cash: $${fineAmount.toLocaleString()}\n` +
+        `$${fineAmount.toLocaleString()}` +
 
-        `😊 Happiness: ${happinessCost} point(s)\n\n` +
-
-        `The fine has initially been charged to the player's ` +
-        `cash balance.\n\n` +
-
-        `The player may use "Pay Fine With Happiness" to ` +
-        `replace the cash fine with the Happiness cost.`
+        automaticPaymentText
 
     );
 
@@ -2053,7 +2230,9 @@ function buyCard(
     p.cash -= card.price;
 
 
-    /* GOODS */
+    /* ========================================================
+       GOODS
+       ======================================================== */
 
     if(cardType === 'yellow') {
 
@@ -2061,9 +2240,11 @@ function buyCard(
             Math.abs(card.electrons);
 
 
-        p.goodsE += electronUse;
+        p.goodsE +=
+            electronUse;
 
-        p.happiness += card.happiness;
+        p.happiness +=
+            card.happiness;
 
         p.netE =
             p.solarE - p.goodsE;
@@ -2099,7 +2280,19 @@ function buyCard(
                 excess * 50;
 
 
-            p.cash -= fineAmount;
+            /*
+               Automatically process the fine.
+
+               Cash is used first. Any remaining balance
+               becomes a Happiness deduction.
+            */
+
+            const paymentResult =
+                processAutomaticPayment(
+                    p,
+                    fineAmount,
+                    `Brownout ${state.brownouts} Fine`
+                );
 
 
             appendLog(
@@ -2117,9 +2310,13 @@ function buyCard(
 
             appendLog(
 
-                `💥 ${p.name} was charged a system fine of ` +
+                `💥 ${p.name}'s $${fineAmount} fine was ` +
 
-                `$${fineAmount}.`
+                `automatically processed: ` +
+
+                `$${paymentResult.cashPaid} cash + ` +
+
+                `${paymentResult.happinessDeducted} Happiness.`
 
             );
 
@@ -2132,7 +2329,9 @@ function buyCard(
 
                 excess,
 
-                fineAmount
+                fineAmount,
+
+                paymentResult
 
             );
 
@@ -2167,13 +2366,17 @@ function buyCard(
     }
 
 
-    /* SOLAR */
+    /* ========================================================
+       SOLAR
+       ======================================================== */
 
     else if(cardType === 'blue') {
 
-        p.solarE += card.electrons;
+        p.solarE +=
+            card.electrons;
 
-        p.happiness += card.happiness;
+        p.happiness +=
+            card.happiness;
 
         p.netE =
             p.solarE - p.goodsE;
@@ -2209,51 +2412,6 @@ function buyCard(
             );
 
     }
-
-
-    updateUserInterface();
-
-}
-
-
-/* ============================================================
-   FINE MITIGATION
-   ============================================================ */
-
-function triggerBankruptcyFineMitigation(pIdx) {
-
-    const p =
-        players[pIdx];
-
-
-    const overageAmt =
-        parseInt(
-
-            prompt(
-                "How many electrons over the capacity did this player go?",
-                "3"
-            )
-
-        );
-
-
-    if(isNaN(overageAmt)) return;
-
-
-    p.happiness -= overageAmt;
-
-    p.cash += overageAmt * 50;
-
-
-    appendLog(
-
-        `💸 Bankruptcy protection applied to ${p.name}. ` +
-
-        `Refunded cash fine, subtracted ${overageAmt} ` +
-
-        `individual Happiness point(s) instead.`
-
-    );
 
 
     updateUserInterface();
@@ -2327,7 +2485,6 @@ function updateBrownoutBoxes() {
         }
 
     }
-
 
 }
 
@@ -2423,7 +2580,8 @@ function applyGridUpgrade() {
         currentTierFee;
 
 
-    state.upgradeRequired = false;
+    state.upgradeRequired =
+        false;
 
 
     appendLog(
@@ -2448,15 +2606,24 @@ function applyGridUpgrade() {
 
 
     /*
-       After an upgrade, resume play with the next
-       unfinished player rather than simply moving one
-       position in the original player array.
+       Resume play with the next unfinished player.
     */
+
+    let upgradeStartIndex =
+        state.activePlayerIdx;
+
+
+    if(upgradeStartIndex === -1) {
+
+        upgradeStartIndex =
+            state.startingPlayerIdx;
+
+    }
+
 
     state.activePlayerIdx =
         findNextUnfinishedPlayer(
-            (state.activePlayerIdx + 1) %
-            players.length
+            upgradeStartIndex
         );
 
 
@@ -2474,7 +2641,6 @@ function applyGridUpgrade() {
 function executeRoundEndPayments() {
 
     /*
-       NEW:
        Pay Day cannot be processed until every player
        has finished their current round.
     */
@@ -2533,12 +2699,18 @@ function executeRoundEndPayments() {
                 : 0;
 
 
-        p.cash += payDay;
+        /*
+           Pay Day is added first.
+        */
+
+        p.cash +=
+            payDay;
 
 
         if(surplusPayment > 0) {
 
-            p.cash += surplusPayment;
+            p.cash +=
+                surplusPayment;
 
 
             appendLog(
@@ -2552,32 +2724,114 @@ function executeRoundEndPayments() {
         }
 
 
+        /*
+           Utility bills are now processed automatically.
+
+           Cash is used first.
+
+           Any remaining bill becomes a Happiness
+           deduction at $50 per point, rounded up.
+        */
+
+        let utilityPaymentResult = {
+
+            amountOwed: 0,
+            cashPaid: 0,
+            remainingBalance: 0,
+            happinessDeducted: 0
+
+        };
+
+
         if(utilityBill > 0) {
 
-            p.cash -= utilityBill;
+            utilityPaymentResult =
+                processAutomaticPayment(
+                    p,
+                    utilityBill,
+                    "Utility Bill"
+                );
 
 
-            appendLog(
-
-                `${p.name} paid $${utilityBill} ` +
-
-                `for energy grid usage.`
-
+            showAutomaticPaymentPopup(
+                p,
+                "Utility Bill",
+                utilityPaymentResult
             );
 
         }
 
 
+        /*
+           Grid fee is treated as a separate mandatory
+           financial obligation.
+
+           It follows the same automatic payment rule.
+        */
+
         const gridFee =
             state.feePerRound;
 
 
+        let gridFeePaymentResult = {
+
+            amountOwed: 0,
+            cashPaid: 0,
+            remainingBalance: 0,
+            happinessDeducted: 0
+
+        };
+
+
         if(gridFee > 0) {
 
-            p.cash -= gridFee;
+            gridFeePaymentResult =
+                processAutomaticPayment(
+                    p,
+                    gridFee,
+                    "Grid Fee"
+                );
+
+            /*
+               Grid fees are not called a utility bill,
+               but they use the same automatic payment
+               mechanism.
+            */
+
+            if(
+                gridFeePaymentResult.happinessDeducted > 0
+            ) {
+
+                alert(
+
+                    `⚡ GRID FEE\n\n` +
+
+                    `${p.name} owed ` +
+
+                    `$${gridFeePaymentResult.amountOwed.toLocaleString()}.\n\n` +
+
+                    `Cash paid: $${gridFeePaymentResult.cashPaid.toLocaleString()}\n\n` +
+
+                    `Remaining balance: $${gridFeePaymentResult.remainingBalance.toLocaleString()}\n\n` +
+
+                    `Automatic Happiness deduction: ` +
+
+                    `-${gridFeePaymentResult.happinessDeducted} ` +
+
+                    `point(s)\n\n` +
+
+                    `Happiness converts at $50 per point.`
+
+                );
+
+            }
 
         }
 
+
+        /*
+           Store the financial summary for display.
+        */
 
         p.lastPayDay =
             payDay + surplusPayment;
@@ -2648,9 +2902,7 @@ function executeRoundEndPayments() {
 
 
     /*
-       NEW:
-       Reset all players so everyone is eligible to
-       participate in the new round.
+       Reset all players for the new round.
     */
 
     players.forEach(
@@ -2659,8 +2911,8 @@ function executeRoundEndPayments() {
 
 
     /*
-       Make sure the new starting player is an
-       unfinished player.
+       Make sure the new starting player is
+       unfinished.
     */
 
     state.activePlayerIdx =
@@ -2693,7 +2945,9 @@ function updateUserInterface() {
 
 
     /*
-       Update Pay Day button availability.
+       Pay Day is available ONLY when:
+       1. Every player has finished.
+       2. No grid upgrade is pending.
     */
 
     const payDayButton =
@@ -2835,6 +3089,7 @@ function updateUserInterface() {
                     }
 
                 </button>
+
 
                 <div class="payment-summary">
 
@@ -3097,29 +3352,6 @@ function updateUserInterface() {
                 }
 
 
-                <div
-                    class="btn-group"
-                    style="margin-top:10px;">
-
-                    <button
-                        class="action-btn"
-                        style="
-                            color:var(--text-muted);
-                        "
-                        onclick="
-                            triggerBankruptcyFineMitigation(
-                                ${idx}
-                            )
-                        ">
-
-                        ⚠️ Pay Fine With Happiness
-
-                    </button>
-
-                </div>
-                
-
-
                 <button
                     class="player-details-toggle"
                     onclick="
@@ -3129,7 +3361,6 @@ function updateUserInterface() {
                     ${toggleText}
 
                 </button>
-
 
 
                 <div class="${detailsClass}">
@@ -3230,7 +3461,6 @@ function updateUserInterface() {
 
                 </div>
 
-
             `;
 
 
@@ -3253,8 +3483,7 @@ function updateUserInterface() {
 
 
     /*
-       Update the system status message to reflect
-       the actual remaining play order.
+       Update system status.
     */
 
     if(allPlayersFinished()) {
