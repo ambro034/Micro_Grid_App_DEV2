@@ -3336,25 +3336,43 @@ async function buyCard(
 
                 </div>
 
-            </div>
+
+                <div class="modal-financial-item">
+
+                    <div class="modal-financial-label">
+                        ${
+                            cardType === "yellow"
+                                ? "⚡ Electricity Use"
+                                : "⚡ Electricity Generation"
+                        }
+                    </div>
+
+                    <div class="modal-financial-value">
+
+                        ${
+                            cardType === "yellow"
+                                ? `${Math.abs(card.electrons)}e`
+                                : `+${card.electrons}e`
+                        }
+
+                    </div>
+
+                </div>
 
 
-            <div style="
-                margin-top:15px;
-                color:var(--text-muted);">
+                <div class="modal-financial-item">
 
-                ${
-                    cardType === "yellow"
-                        ? `⚡ Electricity use:
-                           ${Math.abs(card.electrons)}e`
-                        : `⚡ Electricity generation:
-                           +${card.electrons}e`
-                }
+                    <div class="modal-financial-label">
+                        Cards Remaining
+                    </div>
 
-                <br>
+                    <div class="modal-financial-value">
 
-                Cards remaining after purchase:
-                <strong>${card.quantity - 1}</strong>
+                        ${card.quantity - 1}
+
+                    </div>
+
+                </div>
 
             </div>
 
