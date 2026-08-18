@@ -2434,6 +2434,7 @@ function appendLog(msg) {
         log.firstChild
     );
 
+
 }
 
 
@@ -3000,6 +3001,9 @@ async function noPurchase(pIdx) {
 
 
     updateUserInterface();
+
+
+    await promptFinishRound(pIdx);
 
 }
 
@@ -4503,7 +4507,7 @@ function updateUserInterface() {
                                     : ""
                             }>
 
-                            ⏭️ No Purchase This Round
+                            ⏭️ No purchase this Turn
 
                         </button>
 
