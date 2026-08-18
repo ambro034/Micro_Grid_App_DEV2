@@ -927,7 +927,8 @@
                     style="
                         background:var(--success);
                         color:#0b0f19;
-                    ">
+                    "
+                    disabled>
 
                     Process Pay Day & Utility Bills
 
@@ -1325,6 +1326,8 @@ function registerNeighbor() {
 
         showDetails:false,
 
+        finishedForRound:false,
+
         lastPayDay:0,
 
         lastUtilityBill:0,
@@ -1667,6 +1670,13 @@ function evaluateSystemDemand() {
 
 function noPurchase(pIdx) {
 
+    if(players[pIdx] && players[pIdx].finishedForRound) {
+
+        return;
+
+    }
+
+
     if(state.upgradeRequired) {
 
         alert(
@@ -1693,6 +1703,72 @@ function noPurchase(pIdx) {
 
 
     updateUserInterface();
+
+}
+
+
+/* ============================================================
+   FINISH FOR ROUND
+   ============================================================ */
+
+function finishForRound(pIdx) {
+
+    if(!players[pIdx]) return;
+
+
+    const p =
+        players[pIdx];
+
+
+    if(p.finishedForRound) return;
+
+
+    p.finishedForRound = true;
+
+
+    appendLog(
+        `${p.name} finished play for Round ${state.round}.`
+    );
+
+
+    if(pIdx === state.activePlayerIdx) {
+
+        advanceToNextUnfinishedPlayer();
+
+    }
+
+
+    updateUserInterface();
+
+}
+
+
+/* ============================================================
+   ADVANCE TO NEXT UNFINISHED PLAYER
+   ============================================================ */
+
+function advanceToNextUnfinishedPlayer() {
+
+    if(players.length === 0) return;
+
+
+    for(let i=1;i<=players.length;i++) {
+
+        const nextIdx =
+            (state.activePlayerIdx + i)
+            % players.length;
+
+
+        if(!players[nextIdx].finishedForRound) {
+
+            state.activePlayerIdx =
+                nextIdx;
+
+            return;
+
+        }
+
+    }
 
 }
 
@@ -1768,6 +1844,17 @@ function buyCard(
 
     const p =
         players[pIdx];
+
+
+    if(p.finishedForRound) {
+
+        alert(
+            `${p.name} has already finished play for this round.`
+        );
+
+        return;
+
+    }
 
 
     const deck =
@@ -1920,7 +2007,6 @@ function buyCard(
 
 
             /*
-               NEW:
                Immediately notify the player of the
                brownout and both available fine values.
             */
@@ -2251,9 +2337,7 @@ function applyGridUpgrade() {
         'none';
 
 
-    state.activePlayerIdx =
-        (state.activePlayerIdx + 1)
-        % players.length;
+    advanceToNextUnfinishedPlayer();
 
 
     evaluateSystemDemand();
@@ -2268,6 +2352,24 @@ function applyGridUpgrade() {
    ============================================================ */
 
 function executeRoundEndPayments() {
+
+    const allPlayersFinished =
+        players.length > 0 &&
+        players.every(
+            p => p.finishedForRound
+        );
+
+
+    if(!allPlayersFinished) {
+
+        alert(
+            "All players must finish play for the round before Pay Day and Utility Bills can be processed."
+        );
+
+        return;
+
+    }
+
 
     if(state.upgradeRequired) {
 
@@ -2431,6 +2533,18 @@ function executeRoundEndPayments() {
     state.anyPurchases = false;
 
 
+    /*
+       Reset every player's finished status
+       for the new round.
+    */
+
+    players.forEach(p => {
+
+        p.finishedForRound = false;
+
+    });
+
+
     updateUserInterface();
 
 }
@@ -2454,6 +2568,25 @@ function updateUserInterface() {
         `$${state.feePerRound} / rd`;
 
 
+    /*
+       Pay Day remains disabled until every player
+       has finished the round.
+    */
+
+    const allPlayersFinished =
+        players.length > 0 &&
+        players.every(
+            p => p.finishedForRound
+        );
+
+
+    document.getElementById(
+        'payDayBtn'
+    ).disabled =
+        !allPlayersFinished ||
+        state.upgradeRequired;
+
+
     const container =
         document.getElementById(
             'playerContainer'
@@ -2468,7 +2601,8 @@ function updateUserInterface() {
 
             const isCurrentTurn =
                 idx ===
-                state.activePlayerIdx;
+                state.activePlayerIdx &&
+                !p.finishedForRound;
 
 
             const card =
@@ -2512,9 +2646,11 @@ function updateUserInterface() {
                     }">
 
                         ${
-                            isCurrentTurn
-                                ? 'Active Turn'
-                                : 'Waiting'
+                            p.finishedForRound
+                                ? 'Finished'
+                                : isCurrentTurn
+                                    ? 'Active Turn'
+                                    : 'Waiting'
                         }
 
                     </span>
@@ -2529,6 +2665,41 @@ function updateUserInterface() {
                     ">
 
                     ${toggleText}
+
+                </button>
+
+
+                <button
+                    class="action-btn"
+                    style="
+                        width:100%;
+                        margin-bottom:12px;
+                        background:${
+                            p.finishedForRound
+                                ? '#166534'
+                                : '#475569'
+                        };
+                        color:white;
+                        border-color:${
+                            p.finishedForRound
+                                ? '#22c55e'
+                                : '#64748b'
+                        };
+                    "
+                    onclick="
+                        finishForRound(${idx})
+                    "
+                    ${
+                        p.finishedForRound
+                            ? 'disabled'
+                            : ''
+                    }>
+
+                    ${
+                        p.finishedForRound
+                            ? '✓ Finished for this Round'
+                            : 'Finish for this Round'
+                    }
 
                 </button>
 
@@ -2867,13 +3038,15 @@ function updateUserInterface() {
                             ${
                                 state.upgradeRequired
                                     ? 'Grid upgrade required before the next player can take their turn.'
-                                    : `Waiting for
-                                        ${
-                                            players[
-                                                state.activePlayerIdx
-                                            ].name
-                                        }
-                                        to complete their turn.`
+                                    : p.finishedForRound
+                                        ? '✓ Finished play for this round.'
+                                        : `Waiting for
+                                            ${
+                                                players[
+                                                    state.activePlayerIdx
+                                                ].name
+                                            }
+                                            to complete their turn.`
                             }
 
                         </div>
@@ -2926,15 +3099,25 @@ function updateUserInterface() {
 
     if(players.length > 0) {
 
-        document.getElementById(
-            'turnTrackingText'
-        ).innerText =
+        const activePlayer =
+            players[state.activePlayerIdx];
 
-            `Current turn belongs to: ${
-                players[
-                    state.activePlayerIdx
-                ].name
-            }`;
+
+        if(activePlayer) {
+
+            document.getElementById(
+                'turnTrackingText'
+            ).innerText =
+
+                activePlayer.finishedForRound
+
+                    ? 'All remaining players must finish play for the round.'
+
+                    : `Current turn belongs to: ${
+                        activePlayer.name
+                    }`;
+
+        }
 
     }
 
