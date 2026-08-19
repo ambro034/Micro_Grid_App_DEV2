@@ -3613,6 +3613,14 @@ async function buyCard(
             updateUserInterface();
 
 
+            /* ====================================================
+               CHANGED:
+               The Grid Capacity Upgrade pop-up now appears
+               immediately after the Brownout pop-up.
+               The Finish for This Round pop-up is handled by
+               applyGridUpgrade() after the upgrade is approved.
+               ==================================================== */
+
             await showBrownoutEvent(
                 p,
                 state.brownouts,
@@ -3622,7 +3630,7 @@ async function buyCard(
             );
 
 
-            await promptFinishRound(pIdx);
+            await applyGridUpgrade();
 
             return;
 
@@ -3973,6 +3981,27 @@ async function applyGridUpgrade() {
     evaluateSystemDemand();
 
     updateUserInterface();
+
+
+    /* ============================================================
+       CHANGED:
+       After the capacity upgrade is approved, immediately show
+       the current player's Finish for This Round? pop-up.
+       If this is the last unfinished participant, selecting
+       Finish for This Round will immediately trigger the existing
+       round-settlement pop-up.
+       ============================================================ */
+
+    if(state.activePlayerIdx !== -1) {
+
+        const currentPlayerIdx =
+            state.activePlayerIdx;
+
+        await promptFinishRound(
+            currentPlayerIdx
+        );
+
+    }
 
 }
 
