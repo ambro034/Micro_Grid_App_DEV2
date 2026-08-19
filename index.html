@@ -846,6 +846,30 @@ button.action-btn:hover {
 
 
 /* ============================================================
+   SOLAR PANEL SPECIAL TURN
+   ============================================================ */
+
+.solar-opportunity-notice {
+
+    background: #0c2a3d;
+
+    border: 1px solid var(--blue-card);
+
+    color: #bae6fd;
+
+    padding: 12px;
+
+    border-radius: 8px;
+
+    margin-bottom: 15px;
+
+    font-size: 0.9rem;
+
+    line-height: 1.5;
+}
+
+
+/* ============================================================
    LOG
    ============================================================ */
 
@@ -1865,7 +1889,21 @@ let state = {
 
     randomized:false,
 
-    upgradeRequired:false
+    upgradeRequired:false,
+
+    /* ========================================================
+       SOLAR PANEL OPPORTUNITY STATE
+       ======================================================== */
+
+    solarPanelOpportunityActive:false,
+
+    solarPanelOpportunityUsed:false,
+
+    solarPanelQueue:[],
+
+    solarPanelQueuePosition:0,
+
+    solarPanelReturnPlayerIdx:-1
 
 };
 
@@ -3046,10 +3084,227 @@ function evaluateSystemDemand() {
 
 
 /* ============================================================
+   SOLAR PANEL ELIGIBILITY
+   ============================================================ */
+
+function getEligibleSolarPanelPlayers() {
+
+    return players.filter(p => {
+
+        return solarPanelCards.some(card => {
+
+            return (
+                card.quantity > 0 &&
+                p.cash >= card.price
+            );
+
+        });
+
+    });
+
+}
+
+
+/* ============================================================
+   START SOLAR PANEL OPPORTUNITY
+   ============================================================ */
+
+async function startSolarPanelOpportunity() {
+
+    const eligiblePlayers =
+        getEligibleSolarPanelPlayers();
+
+
+    if(eligiblePlayers.length === 0) {
+
+        await applyGridUpgrade();
+
+        return;
+
+    }
+
+
+    state.solarPanelOpportunityUsed = true;
+
+    state.solarPanelOpportunityActive = true;
+
+    state.solarPanelReturnPlayerIdx =
+        state.activePlayerIdx;
+
+
+    /*
+       Preserve the existing round order.
+
+       The queue begins with the player who was active when
+       the Grid Capacity Upgrade pop-up appeared and then
+       proceeds around the table in the normal turn order.
+    */
+
+    const startingPoint =
+        state.solarPanelReturnPlayerIdx === -1
+            ? 0
+            : state.solarPanelReturnPlayerIdx;
+
+
+    state.solarPanelQueue =
+        eligiblePlayers
+            .map(p=>players.indexOf(p))
+            .sort((a,b)=>{
+
+                const distanceA =
+                    (
+                        a -
+                        startingPoint +
+                        players.length
+                    ) %
+                    players.length;
+
+                const distanceB =
+                    (
+                        b -
+                        startingPoint +
+                        players.length
+                    ) %
+                    players.length;
+
+                return distanceA - distanceB;
+
+            });
+
+
+    state.solarPanelQueuePosition = 0;
+
+
+    state.activePlayerIdx =
+        state.solarPanelQueue[0];
+
+
+    appendLog(
+        `☀️ Solar Panel Purchase opportunity activated. ` +
+        `${state.solarPanelQueue.length} eligible player(s) will receive a Solar Panel turn.`
+    );
+
+
+    updateUserInterface();
+
+}
+
+
+/* ============================================================
+   ADVANCE SOLAR PANEL OPPORTUNITY
+   ============================================================ */
+
+async function advanceSolarPanelOpportunity() {
+
+    if(!state.solarPanelOpportunityActive) {
+
+        return;
+
+    }
+
+
+    state.solarPanelQueuePosition += 1;
+
+
+    if(
+        state.solarPanelQueuePosition <
+        state.solarPanelQueue.length
+    ) {
+
+        state.activePlayerIdx =
+            state.solarPanelQueue[
+                state.solarPanelQueuePosition
+            ];
+
+
+        updateUserInterface();
+
+        return;
+
+    }
+
+
+    /*
+       All eligible players have now received their special
+       Solar Panel opportunity.
+
+       Restore the exact player who was active before the
+       special sequence began.
+    */
+
+    const restoredPlayer =
+        state.solarPanelReturnPlayerIdx;
+
+
+    state.solarPanelOpportunityActive = false;
+
+    state.solarPanelQueue = [];
+
+    state.solarPanelQueuePosition = 0;
+
+    state.activePlayerIdx =
+        restoredPlayer;
+
+
+    state.solarPanelReturnPlayerIdx = -1;
+
+
+    appendLog(
+        "☀️ Solar Panel Purchase opportunity complete. " +
+        "Returning to the normal round turn order."
+    );
+
+
+    updateUserInterface();
+
+
+    /*
+       The grid upgrade still needs to be approved before
+       normal play can continue.
+    */
+
+    await applyGridUpgrade();
+
+}
+
+
+/* ============================================================
    NO PURCHASE
    ============================================================ */
 
 async function noPurchase(pIdx) {
+
+    /*
+       Special Solar Panel-only turn handling.
+    */
+
+    if(state.solarPanelOpportunityActive) {
+
+        const p =
+            players[pIdx];
+
+
+        if(
+            !p ||
+            pIdx !== state.activePlayerIdx
+        ) {
+
+            return;
+
+        }
+
+
+        appendLog(
+            `${p.name} chose not to purchase a Solar Panel during the special Solar Panel opportunity.`
+        );
+
+
+        await advanceSolarPanelOpportunity();
+
+        return;
+
+    }
+
 
     if(state.upgradeRequired) {
 
@@ -3298,7 +3553,19 @@ async function buyCard(
     cardIndex
 ) {
 
-    if(state.upgradeRequired) {
+    /*
+       During the Solar Panel opportunity, only Solar Panel
+       purchases are permitted. The normal grid-upgrade lock
+       is temporarily bypassed only for Solar Panel cards.
+    */
+
+    if(
+        state.upgradeRequired &&
+        !(
+            state.solarPanelOpportunityActive &&
+            cardType === "blue"
+        )
+    ) {
 
         await showMessage(
             "Grid Upgrade Required",
@@ -3319,6 +3586,21 @@ async function buyCard(
         !p ||
         pIdx !== state.activePlayerIdx ||
         p.finishedThisRound
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       Goods Cards are never permitted during a special
+       Solar Panel turn.
+    */
+
+    if(
+        state.solarPanelOpportunityActive &&
+        cardType !== "blue"
     ) {
 
         return;
@@ -3603,6 +3885,13 @@ async function buyCard(
 
             state.upgradeRequired = true;
 
+            /*
+               A new Solar Panel opportunity is available for
+               this specific grid upgrade.
+            */
+
+            state.solarPanelOpportunityUsed = false;
+
 
             document.getElementById(
                 "upgradeGridBtn"
@@ -3612,14 +3901,6 @@ async function buyCard(
 
             updateUserInterface();
 
-
-            /* ====================================================
-               CHANGED:
-               The Grid Capacity Upgrade pop-up now appears
-               immediately after the Brownout pop-up.
-               The Finish for This Round pop-up is handled by
-               applyGridUpgrade() after the upgrade is approved.
-               ==================================================== */
 
             await showBrownoutEvent(
                 p,
@@ -3659,6 +3940,25 @@ async function buyCard(
 
 
         evaluateSystemDemand();
+
+    }
+
+
+    /*
+       Special Solar Panel turn:
+
+       The player does not advance the normal round order
+       immediately. Instead, the next eligible player gets
+       their special Solar Panel turn.
+    */
+
+    if(state.solarPanelOpportunityActive) {
+
+        updateUserInterface();
+
+        await advanceSolarPanelOpportunity();
+
+        return;
 
     }
 
@@ -3918,23 +4218,97 @@ async function applyGridUpgrade() {
     `;
 
 
-    const confirmed =
-        await showConfirmation(
+    /*
+       Determine whether the additional Solar Panel button
+       should appear.
 
-            "Grid Capacity Upgrade",
+       The player only needs to be able to afford at least
+       one currently available Solar Panel card.
+    */
 
-            upgradeMessage,
-
-            "🔧",
-
-            "Approve Upgrade",
-
-            "purple"
-
-        );
+    const eligibleSolarPlayers =
+        getEligibleSolarPanelPlayers();
 
 
-    if(!confirmed) return;
+    const solarPanelButtonAvailable =
+        eligibleSolarPlayers.length > 0 &&
+        !state.solarPanelOpportunityUsed;
+
+
+    const upgradeButtons = [];
+
+
+    if(solarPanelButtonAvailable) {
+
+        upgradeButtons.push({
+
+            text:"Purchase Solar Panel",
+
+            className:"primary",
+
+            value:"solar"
+
+        });
+
+    }
+
+
+    /*
+       There is intentionally NO Cancel button here.
+
+       Approve Upgrade is the only way to proceed directly
+       with the capacity upgrade.
+    */
+
+    upgradeButtons.push({
+
+        text:"Approve Upgrade",
+
+        className:"purple",
+
+        value:"approve"
+
+    });
+
+
+    const upgradeChoice =
+        await openGameModal({
+
+            title:
+                "Grid Capacity Upgrade",
+
+            body:
+                upgradeMessage,
+
+            icon:"🔧",
+
+            buttons:
+                upgradeButtons
+
+        });
+
+
+    /*
+       The Solar Panel opportunity occurs before the grid
+       upgrade is approved. Once all eligible players have
+       received their special turns, this function is called
+       again and the upgrade can then be approved normally.
+    */
+
+    if(upgradeChoice === "solar") {
+
+        await startSolarPanelOpportunity();
+
+        return;
+
+    }
+
+
+    if(upgradeChoice !== "approve") {
+
+        return;
+
+    }
 
 
     state.capacity +=
@@ -3982,15 +4356,6 @@ async function applyGridUpgrade() {
 
     updateUserInterface();
 
-
-    /* ============================================================
-       CHANGED:
-       After the capacity upgrade is approved, immediately show
-       the current player's Finish for This Round? pop-up.
-       If this is the last unfinished participant, selecting
-       Finish for This Round will immediately trigger the existing
-       round-settlement pop-up.
-       ============================================================ */
 
     if(state.activePlayerIdx !== -1) {
 
@@ -4434,6 +4799,21 @@ function updateUserInterface() {
 
         }
 
+        else if(
+            isCurrentTurn &&
+            state.solarPanelOpportunityActive
+        ) {
+
+            turnBadge = `
+
+                <span class="turn-badge active">
+                    ☀️ Solar Panel Turn
+                </span>
+
+            `;
+
+        }
+
         else if(isCurrentTurn) {
 
             turnBadge = `
@@ -4537,16 +4917,48 @@ function updateUserInterface() {
 
                     <div class="card-selection">
 
+                        ${
+                            state.solarPanelOpportunityActive
+
+                            ? `
+
+                                <div class="solar-opportunity-notice">
+
+                                    <strong>
+                                        ☀️ Special Solar Panel Opportunity
+                                    </strong>
+
+                                    <br><br>
+
+                                    This is a Solar Panel-only turn.
+                                    Goods Cards are disabled.
+                                    You may purchase one available
+                                    Solar Panel or choose to pass.
+
+                                </div>
+
+                            `
+
+                            : ""
+
+                        }
+
+
                         <button
                             class="no-purchase-button"
                             onclick="noPurchase(${idx})"
                             ${
-                                state.upgradeRequired
+                                state.upgradeRequired &&
+                                !state.solarPanelOpportunityActive
                                     ? "disabled"
                                     : ""
                             }>
 
-                            ⏭️ No purchase this Turn
+                            ${
+                                state.solarPanelOpportunityActive
+                                    ? "⏭️ No Solar Panel Purchase"
+                                    : "⏭️ No purchase this Turn"
+                            }
 
                         </button>
 
@@ -4568,7 +4980,8 @@ function updateUserInterface() {
                                         ${
                                             c.quantity<=0 ||
                                             p.cash<c.price ||
-                                            state.upgradeRequired
+                                            state.upgradeRequired ||
+                                            state.solarPanelOpportunityActive
                                                 ? "disabled"
                                                 : ""
                                         }
@@ -4628,7 +5041,10 @@ function updateUserInterface() {
                                         ${
                                             c.quantity<=0 ||
                                             p.cash<c.price ||
-                                            state.upgradeRequired
+                                            (
+                                                state.upgradeRequired &&
+                                                !state.solarPanelOpportunityActive
+                                            )
                                                 ? "disabled"
                                                 : ""
                                         }
@@ -4686,19 +5102,23 @@ function updateUserInterface() {
 
                                 ? "✓ This player has finished for this round."
 
-                                : state.upgradeRequired
+                                : state.solarPanelOpportunityActive
 
-                                    ? "Grid upgrade required before the next player can take their turn."
+                                    ? "☀️ Waiting for this player's Solar Panel opportunity."
 
-                                    : state.activePlayerIdx === -1
+                                    : state.upgradeRequired
 
-                                        ? "All players have finished this round."
+                                        ? "Grid upgrade required before the next player can take their turn."
 
-                                        : `Waiting for ${
-                                            players[
-                                                state.activePlayerIdx
-                                            ].name
-                                        } to complete their turn.`
+                                        : state.activePlayerIdx === -1
+
+                                            ? "All players have finished this round."
+
+                                            : `Waiting for ${
+                                                players[
+                                                    state.activePlayerIdx
+                                                ].name
+                                            } to complete their turn.`
                         }
 
                     </div>
@@ -4827,7 +5247,24 @@ function updateUserInterface() {
     }
 
 
-    if(allPlayersFinished()) {
+    if(state.solarPanelOpportunityActive) {
+
+        const currentPlayer =
+            players[state.activePlayerIdx];
+
+
+        document.getElementById(
+            "turnTrackingText"
+        ).innerText =
+            `☀️ Solar Panel opportunity: ${
+                currentPlayer
+                    ? currentPlayer.name
+                    : "No player"
+            }`;
+
+    }
+
+    else if(allPlayersFinished()) {
 
         document.getElementById(
             "turnTrackingText"
