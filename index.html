@@ -4768,6 +4768,22 @@ function updateUserInterface() {
             p.finishedThisRound;
 
 
+        /*
+         * During the Solar Panel-only turn sequence,
+         * players with $1,999 or less receive the same
+         * darker container styling used for finished players.
+         *
+         * Players with $2,000 or more remain in the normal
+         * container style.
+         *
+         * Normal finished-round behavior remains unchanged.
+         */
+
+        const solarPanelCashFinished =
+            state.solarPanelSpecialTurn &&
+            p.cash <= 1999;
+
+
         const card =
             document.createElement("div");
 
@@ -4779,7 +4795,8 @@ function updateUserInterface() {
                     ? "active-turn"
                     : ""
             } ${
-                isFinished
+                isFinished ||
+                solarPanelCashFinished
                     ? "finished-round"
                     : ""
             }`;
