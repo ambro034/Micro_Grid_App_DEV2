@@ -105,7 +105,7 @@ h1 {
 
 .grid-dashboard {
 
-    display: grid;
+    display: none;
 
     grid-template-columns:
         repeat(auto-fit, minmax(200px, 1fr));
@@ -1296,7 +1296,9 @@ button.action-btn:hover {
      DASHBOARD
      ============================================================ -->
 
-<div class="grid-dashboard">
+<div
+id="gridDashboard"
+class="grid-dashboard">
 
 <div class="dash-card">
 
@@ -2075,15 +2077,6 @@ function handleModalBackdrop(event) {
         return;
 
     }
-
-    /*
-       Deliberately do nothing.
-
-       Players must explicitly select an
-       in-game button so important game
-       decisions cannot be dismissed
-       accidentally.
-    */
 
 }
 
@@ -2921,6 +2914,11 @@ async function commenceGridSimulation() {
     document.getElementById(
         "managerView"
     ).style.display = "block";
+
+
+    document.getElementById(
+        "gridDashboard"
+    ).style.display = "grid";
 
 
     state.activePlayerIdx =
@@ -4850,6 +4848,12 @@ function forceEndGame(condition) {
         "endView"
     ).style.display =
         "block";
+
+
+    document.getElementById(
+        "gridDashboard"
+    ).style.display =
+        "none";
 
 
     const heading =
