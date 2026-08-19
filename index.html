@@ -1877,7 +1877,9 @@ let state = {
 
     solarPanelTurnIndex:0,
 
-    normalTurnReturnIndex:-1
+    normalTurnReturnIndex:-1,
+
+    solarPanelPurchasedDuringOpportunity:false
 
 };
 
@@ -2524,6 +2526,7 @@ function appendLog(msg) {
         log.firstChild
     );
 
+
 }
 
 
@@ -3133,6 +3136,8 @@ async function startSolarPanelOnlyTurns() {
 
     state.solarPanelSpecialTurn = true;
 
+    state.solarPanelPurchasedDuringOpportunity = false;
+
 
     appendLog(
         `☀️ Solar Panel special turn activated. ` +
@@ -3233,6 +3238,9 @@ async function advanceSolarPanelTurn() {
         const returnIndex =
             state.normalTurnReturnIndex;
 
+        const solarPanelWasPurchased =
+            state.solarPanelPurchasedDuringOpportunity;
+
 
         state.solarPanelSpecialTurn = false;
 
@@ -3241,6 +3249,8 @@ async function advanceSolarPanelTurn() {
         state.solarPanelTurnIndex = 0;
 
         state.normalTurnReturnIndex = -1;
+
+        state.solarPanelPurchasedDuringOpportunity = false;
 
 
         state.activePlayerIdx =
@@ -3253,13 +3263,79 @@ async function advanceSolarPanelTurn() {
         );
 
 
+        /*
+         * If at least one Solar Panel was purchased during
+         * the special opportunity, the Grid Capacity Upgrade
+         * is skipped and normal gameplay resumes immediately.
+         */
+
+        if(solarPanelWasPurchased) {
+
+            state.upgradeRequired = false;
+
+
+            document.getElementById(
+                "upgradeGridBtn"
+            ).style.display =
+                "none";
+
+
+            appendLog(
+                `☀️ Solar Panel purchased during the special opportunity. ` +
+                `Grid Capacity Upgrade skipped. Normal gameplay resumes.`
+            );
+
+
+            let startingPoint =
+                state.activePlayerIdx;
+
+
+            if(startingPoint === -1) {
+
+                startingPoint = 0;
+
+            }
+
+
+            state.activePlayerIdx =
+                findNextUnfinishedPlayer(
+                    startingPoint
+                );
+
+
+            evaluateSystemDemand();
+
+            updateUserInterface();
+
+
+            /*
+             * Resume the normal turn sequence from the player
+             * who was next in the normal gameplay flow.
+             */
+
+            if(state.activePlayerIdx !== -1) {
+
+                const currentPlayerIdx =
+                    state.activePlayerIdx;
+
+                await promptFinishRound(
+                    currentPlayerIdx
+                );
+
+            }
+
+
+            return;
+
+        }
+
+
         updateUserInterface();
 
 
         /*
-         * The capacity upgrade is still required.
-         * Reopen the same Grid Capacity Upgrade decision
-         * from the exact point where the special turns began.
+         * No Solar Panel was purchased, so the existing
+         * Grid Capacity Upgrade process remains unchanged.
          */
 
         if(state.upgradeRequired) {
@@ -3981,6 +4057,20 @@ async function buyCard(
             `generated +${card.electrons}e, ` +
             `gained +${card.happiness} happiness.`
         );
+
+
+        /*
+         * Record that a Solar Panel was actually purchased
+         * during the special opportunity. This causes the
+         * Grid Capacity Upgrade to be skipped once the
+         * special-turn sequence is complete.
+         */
+
+        if(state.solarPanelSpecialTurn) {
+
+            state.solarPanelPurchasedDuringOpportunity = true;
+
+        }
 
 
         evaluateSystemDemand();
@@ -5459,6 +5549,8 @@ function forceEndGame(condition) {
     state.solarPanelTurnIndex = 0;
 
     state.normalTurnReturnIndex = -1;
+
+    state.solarPanelPurchasedDuringOpportunity = false;
 
 
     document.getElementById(
