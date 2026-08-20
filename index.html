@@ -940,6 +940,8 @@ button.action-btn:hover {
 
     width: min(560px, 100%);
 
+    max-height: calc(100vh - 40px);
+
     background:
         linear-gradient(
             145deg,
@@ -956,6 +958,10 @@ button.action-btn:hover {
         0 0 30px rgba(56,189,248,0.08);
 
     overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
 
     animation: modalSlideIn 0.2s ease-out;
 }
@@ -974,6 +980,8 @@ button.action-btn:hover {
     border-bottom: 1px solid var(--border);
 
     background: rgba(15,23,42,0.7);
+
+    flex-shrink: 0;
 }
 
 
@@ -1016,6 +1024,10 @@ button.action-btn:hover {
     line-height: 1.6;
 
     font-size: 0.95rem;
+
+    overflow-y: auto;
+
+    min-height: 0;
 }
 
 
@@ -1038,6 +1050,8 @@ button.action-btn:hover {
     border-top: 1px solid var(--border);
 
     background: rgba(15,23,42,0.45);
+
+    flex-shrink: 0;
 }
 
 
